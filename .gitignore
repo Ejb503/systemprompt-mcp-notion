@@ -1,0 +1,16 @@
+node_modules/
+build/
+*.log
+.env*
+
+agent
+agent/*
+
+coverage/
+output/
+scripts/*
+!scripts/test-notion.ts
+
+# Ignore credential files but not the directory
+credentials/*
+!credentials/.gitkeep

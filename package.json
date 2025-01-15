@@ -1,0 +1,58 @@
+{
+  "name": "systemprompt-mcp-notion",
+  "version": "1.0.0",
+  "description": "A specialized Model Context Protocol (MCP) server that integrates Notion into your AI workflows. This server enables seamless access to Notion through MCP, allowing AI agents to interact with pages, databases, and comments.",
+  "type": "module",
+  "bin": {
+    "systemprompt-mcp-notion": "./build/index.js"
+  },
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "watch": "tsc --watch",
+    "inspector": "npx @modelcontextprotocol/inspector build/index.js",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "test:notion": "node --loader ts-node/esm ./scripts/test-notion.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "@notionhq/client": "^2.2.15",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^8.2.0",
+    "@types/jest": "^29.5.12",
+    "@types/json-schema": "^7.0.15",
+    "@types/node": "^20.11.24",
+    "cross-env": "^7.0.3",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-jest-resolver": "^2.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/systemprompt-io/systemprompt-mcp-notion"
+  },
+  "keywords": [
+    "systemprompt",
+    "mcp",
+    "model-context-protocol",
+    "notion"
+  ],
+  "author": "SystemPrompt",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/systemprompt-io/systemprompt-mcp-notion/issues"
+  },
+  "homepage": "https://systemprompt.io",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
