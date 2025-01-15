@@ -1,7 +1,7 @@
 # systemprompt-mcp-notion
 
 [![npm version](https://img.shields.io/npm/v/systemprompt-mcp-notion.svg)](https://www.npmjs.com/package/systemprompt-mcp-notion)
-[![Coverage Status](https://coveralls.io/repos/github/Ejb503/mcp-server-systemprompt-notion/badge.svg?branch=main)](https://coveralls.io/github/Ejb503/mcp-server-systemprompt-notion?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/Ejb503/systemprompt-mcp-notion/badge.svg?branch=main)](https://coveralls.io/github/Ejb503/systemprompt-mcp-notion?branch=main)
 [![Twitter Follow](https://img.shields.io/twitter/follow/tyingshoelaces_?style=social)](https://twitter.com/tyingshoelaces_)
 [![Discord](https://img.shields.io/discord/1255160891062620252?color=7289da&label=discord)](https://discord.com/invite/wkAbSuPWpr)
 
