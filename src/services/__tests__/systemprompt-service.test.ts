@@ -40,6 +40,14 @@ describe("SystemPromptService", () => {
         "SystemPromptService must be initialized with an API key first"
       );
     });
+
+    it("should cleanup instance correctly", () => {
+      expect(SystemPromptService.getInstance()).toBeDefined();
+      SystemPromptService.cleanup();
+      expect(() => SystemPromptService.getInstance()).toThrow(
+        "SystemPromptService must be initialized with an API key first"
+      );
+    });
   });
 
   describe("request error handling", () => {
@@ -74,6 +82,98 @@ describe("SystemPromptService", () => {
 
       await expect(service.getAllPrompts()).rejects.toThrow(
         "Failed to parse API response"
+      );
+    });
+
+    it("should handle 404 not found error", async () => {
+      mockFetch.mockImplementationOnce(() =>
+        Promise.resolve({
+          ok: false,
+          status: 404,
+          json: () => Promise.resolve({ message: "Resource not found" }),
+        })
+      );
+
+      await expect(service.getBlock("non-existent")).rejects.toThrow(
+        "Resource not found - it may have been deleted"
+      );
+    });
+
+    it("should handle 409 conflict error", async () => {
+      mockFetch.mockImplementationOnce(() =>
+        Promise.resolve({
+          ok: false,
+          status: 409,
+          json: () => Promise.resolve({ message: "Resource conflict" }),
+        })
+      );
+
+      await expect(service.getBlock("conflicted")).rejects.toThrow(
+        "Resource conflict - it may have been edited"
+      );
+    });
+
+    it("should handle 400 bad request with custom message", async () => {
+      mockFetch.mockImplementationOnce(() =>
+        Promise.resolve({
+          ok: false,
+          status: 400,
+          json: () => Promise.resolve({ message: "Custom error message" }),
+        })
+      );
+
+      await expect(service.getBlock("invalid")).rejects.toThrow(
+        "Custom error message"
+      );
+    });
+
+    it("should handle 400 bad request without message", async () => {
+      mockFetch.mockImplementationOnce(() =>
+        Promise.resolve({
+          ok: false,
+          status: 400,
+          json: () => Promise.resolve({}),
+        })
+      );
+
+      await expect(service.getBlock("invalid")).rejects.toThrow(
+        "Invalid request parameters"
+      );
+    });
+
+    it("should handle unknown error with message", async () => {
+      mockFetch.mockImplementationOnce(() =>
+        Promise.resolve({
+          ok: false,
+          status: 500,
+          json: () => Promise.resolve({ message: "Internal server error" }),
+        })
+      );
+
+      await expect(service.getBlock("error")).rejects.toThrow(
+        "Internal server error"
+      );
+    });
+
+    it("should handle unknown error without message", async () => {
+      mockFetch.mockImplementationOnce(() =>
+        Promise.resolve({
+          ok: false,
+          status: 500,
+          json: () => Promise.resolve({}),
+        })
+      );
+
+      await expect(service.getBlock("error")).rejects.toThrow(
+        "API request failed with status 500"
+      );
+    });
+
+    it("should handle error without message property", async () => {
+      mockFetch.mockImplementationOnce(() => Promise.reject(new Error()));
+
+      await expect(service.getBlock("error")).rejects.toThrow(
+        "API request failed"
       );
     });
   });

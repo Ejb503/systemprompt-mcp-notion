@@ -49,6 +49,7 @@ describe("Server Configuration", () => {
         prompts: {
           listChanged: true,
         },
+        sampling: {},
       });
     });
   });

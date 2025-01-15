@@ -17,6 +17,40 @@ import type {
 } from "@notionhq/client/build/src/api-endpoints.js";
 import type { NotionPage } from "../../types/notion.js";
 
+// Mock the server config
+jest.mock("../../config/server-config.js", () => ({
+  serverConfig: {
+    port: 3000,
+    host: "localhost",
+  },
+  serverCapabilities: {
+    tools: [],
+  },
+}));
+
+// Mock the main function
+jest.mock("../../index.ts", () => {
+  const mockNotification = jest.fn().mockImplementation(async () => {});
+  return {
+    main: jest.fn(),
+    server: {
+      notification: mockNotification,
+    },
+  };
+});
+
+// Mock the sampling module
+jest.mock("../sampling.js", () => ({
+  handleSamplingRequest: jest.fn().mockImplementation(async () => ({
+    content: [
+      {
+        type: "text",
+        text: "Sampling response",
+      },
+    ],
+  })),
+}));
+
 const richTextContent: RichTextItemResponse = {
   type: "text",
   text: { content: "Test comment", link: null },
@@ -206,7 +240,7 @@ describe("Tool Handlers", () => {
 
         const result = await handleToolCall(request);
         expect(mockNotionService.createPage).toHaveBeenCalledWith({
-          parent: { database_id: "db123" },
+          parent: { database_id: "db123", type: "database_id" },
           properties: {
             title: {
               title: [{ text: { content: "Test Page" } }],

@@ -68,8 +68,6 @@ export class NotionService {
     query: string,
     maxResults: number = 50
   ): Promise<ListPagesResult> {
-    console.log(`Searching for pages with query: "${query}"`);
-
     const response = await this.client.search({
       query,
       filter: {
@@ -83,10 +81,7 @@ export class NotionService {
       },
     });
 
-    console.log(`Found ${response.results.length} results before filtering`);
-
     const pages = response.results.filter(isFullPage).map(mapPageToNotionPage);
-    console.log(`Returning ${pages.length} pages after filtering`);
 
     return {
       pages,
@@ -152,6 +147,22 @@ export class NotionService {
       hasMore: response.has_more,
       nextCursor: response.next_cursor || undefined,
     };
+  }
+
+  async searchDatabases(maxResults: number = 50): Promise<any> {
+    const response = await this.client.search({
+      filter: {
+        property: "object",
+        value: "database",
+      },
+      page_size: maxResults,
+      sort: {
+        direction: "descending",
+        timestamp: "last_edited_time",
+      },
+    });
+
+    return response;
   }
 
   async createComment(
