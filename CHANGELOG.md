@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2] - 2025-01-15
+
+### Changed
+
+- Enhanced test configuration and coverage across handlers and services
+- Updated tool handling system with improved type definitions
+- Refined prompt handling implementation and tests
+- Improved system prompt service functionality
+
+### Fixed
+
+- Various type safety improvements in tool arguments and schemas
+- Standardized handler implementations across the codebase
+
 ## [1.0.1] - 2024-03-26
 
 ### Changed
