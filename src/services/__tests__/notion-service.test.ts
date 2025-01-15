@@ -8,7 +8,11 @@ import {
 } from "@jest/globals";
 import { NotionService } from "../notion-service.js";
 import { Client } from "@notionhq/client";
-import type { CommentObjectResponse } from "@notionhq/client/build/src/api-endpoints.js";
+import type {
+  CommentObjectResponse,
+  CreateCommentParameters,
+  ListCommentsParameters,
+} from "@notionhq/client/build/src/api-endpoints.js";
 
 // Mock objects
 const mockCommentResponse: CommentObjectResponse = {
@@ -45,11 +49,18 @@ const mockCommentsListResponse = {
 
 // Mock the Client class
 jest.mock("@notionhq/client", () => {
+  const createMock = jest.fn((_params: CreateCommentParameters) =>
+    Promise.resolve(mockCommentResponse)
+  );
+  const listMock = jest.fn((_params: ListCommentsParameters) =>
+    Promise.resolve(mockCommentsListResponse)
+  );
+
   return {
     Client: jest.fn().mockImplementation(() => ({
       comments: {
-        create: jest.fn().mockResolvedValue(mockCommentResponse),
-        list: jest.fn().mockResolvedValue(mockCommentsListResponse),
+        create: createMock,
+        list: listMock,
       },
     })),
   };
