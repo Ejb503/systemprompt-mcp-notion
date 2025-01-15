@@ -1,6 +1,6 @@
 {
   "name": "systemprompt-mcp-notion",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A specialized Model Context Protocol (MCP) server that integrates Notion into your AI workflows. This server enables seamless access to Notion through MCP, allowing AI agents to interact with pages, databases, and comments.",
   "type": "module",
   "bin": {
