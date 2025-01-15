@@ -1,26 +1,34 @@
 import type {
   CreatePageParameters,
   SearchParameters,
+  PageObjectResponse,
+  CommentObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints.d.ts";
 
 export type NotionParentType = "database_id" | "page_id" | "workspace";
 
-export interface NotionParent {
-  type: NotionParentType;
-  id: string;
-}
+export type NotionParent =
+  | {
+      type: "database_id";
+      database_id: string;
+    }
+  | {
+      type: "page_id";
+      page_id: string;
+    }
+  | {
+      type: "workspace";
+      workspace: true;
+    };
 
 export interface NotionPage {
-  id: string;
+  id: PageObjectResponse["id"];
   title: string;
-  url: string;
-  created_time: string;
-  last_edited_time: string;
-  properties: Record<string, unknown>;
-  parent: {
-    type: NotionParentType;
-    [key: string]: string | NotionParentType;
-  };
+  url: PageObjectResponse["url"];
+  created_time: PageObjectResponse["created_time"];
+  last_edited_time: PageObjectResponse["last_edited_time"];
+  properties: PageObjectResponse["properties"];
+  parent: NotionParent;
 }
 
 export interface ListPagesOptions {
@@ -37,9 +45,7 @@ export interface ListPagesResult {
 }
 
 export type CreatePageOptions = {
-  parent:
-    | { database_id: string; type?: "database_id" }
-    | { page_id: string; type?: "page_id" };
+  parent: CreatePageParameters["parent"];
   properties: CreatePageParameters["properties"];
   children?: CreatePageParameters["children"];
 };
@@ -50,10 +56,10 @@ export interface UpdatePageOptions {
 }
 
 export interface NotionComment {
-  id: string;
-  discussionId: string;
+  id: CommentObjectResponse["id"];
+  discussionId: CommentObjectResponse["discussion_id"];
   content: string;
-  createdTime: string;
-  lastEditedTime: string;
+  createdTime: CommentObjectResponse["created_time"];
+  lastEditedTime: CommentObjectResponse["last_edited_time"];
   parentId?: string;
 }

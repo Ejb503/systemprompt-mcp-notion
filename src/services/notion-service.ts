@@ -46,14 +46,13 @@ export class NotionService {
       filter: {
         property: "object",
         value: "page",
-        ...options.filter,
       },
-      page_size: options.pageSize || 100,
-      sort: options.sort || {
-        direction: "descending",
+      page_size: options?.pageSize || 50,
+      sort: options?.sort || {
+        direction: "ascending",
         timestamp: "last_edited_time",
       },
-      start_cursor: options.startCursor,
+      start_cursor: options?.startCursor,
     });
 
     const pages = response.results.filter(isFullPage).map(mapPageToNotionPage);
@@ -67,15 +66,15 @@ export class NotionService {
 
   async searchPages(
     query: string,
-    maxResults: number = 10
-  ): Promise<NotionPage[]> {
+    maxResults: number = 50
+  ): Promise<ListPagesResult> {
     console.log(`Searching for pages with query: "${query}"`);
 
     const response = await this.client.search({
       query,
       filter: {
-        value: "page",
         property: "object",
+        value: "page",
       },
       page_size: maxResults,
       sort: {
@@ -89,7 +88,11 @@ export class NotionService {
     const pages = response.results.filter(isFullPage).map(mapPageToNotionPage);
     console.log(`Returning ${pages.length} pages after filtering`);
 
-    return pages;
+    return {
+      pages,
+      hasMore: response.has_more,
+      nextCursor: response.next_cursor || undefined,
+    };
   }
 
   async getPage(pageId: string): Promise<NotionPage> {
@@ -125,7 +128,7 @@ export class NotionService {
   async searchPagesByTitle(
     title: string,
     maxResults: number = 10
-  ): Promise<NotionPage[]> {
+  ): Promise<ListPagesResult> {
     const response = await this.client.search({
       query: title,
       filter: {
@@ -139,10 +142,16 @@ export class NotionService {
       },
     });
 
-    return response.results
+    const pages = response.results
       .filter(isFullPage)
       .map(mapPageToNotionPage)
       .filter((page) => page.title.toLowerCase().includes(title.toLowerCase()));
+
+    return {
+      pages,
+      hasMore: response.has_more,
+      nextCursor: response.next_cursor || undefined,
+    };
   }
 
   async createComment(

@@ -4,7 +4,7 @@ import type {
   TitlePropertyItemObjectResponse,
   RichTextItemResponse,
 } from "@notionhq/client/build/src/api-endpoints.d.ts";
-import { NotionPage, NotionParentType } from "../types/notion.js";
+import type { NotionPage, NotionParent } from "../types/notion.js";
 
 export function isFullPage(obj: unknown): obj is PageObjectResponse {
   console.log("Checking if object is a full page:", obj);
@@ -46,18 +46,25 @@ export function isFullPage(obj: unknown): obj is PageObjectResponse {
 }
 
 export function mapPageToNotionPage(page: PageObjectResponse): NotionPage {
-  let parentType: NotionParentType;
-  let parentId: string;
+  let parent: NotionParent;
 
   if ("database_id" in page.parent) {
-    parentType = "database_id";
-    parentId = page.parent.database_id;
+    parent = {
+      type: "database_id",
+      database_id: page.parent.database_id,
+    };
   } else if ("page_id" in page.parent) {
-    parentType = "page_id";
-    parentId = page.parent.page_id;
+    parent = {
+      type: "page_id",
+      page_id: page.parent.page_id,
+    };
+  } else if (page.parent.type === "workspace") {
+    parent = {
+      type: "workspace",
+      workspace: true,
+    };
   } else {
-    parentType = "workspace";
-    parentId = "workspace";
+    throw new Error("Invalid parent type");
   }
 
   return {
@@ -67,10 +74,7 @@ export function mapPageToNotionPage(page: PageObjectResponse): NotionPage {
     created_time: page.created_time,
     last_edited_time: page.last_edited_time,
     properties: page.properties,
-    parent: {
-      type: parentType,
-      id: parentId,
-    },
+    parent,
   };
 }
 

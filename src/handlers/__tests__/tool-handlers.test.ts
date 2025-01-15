@@ -57,10 +57,18 @@ const mockComment = {
 const mockNotionService = {
   searchPages: jest
     .fn<typeof NotionService.prototype.searchPages>()
-    .mockResolvedValue([mockPage]),
+    .mockResolvedValue({
+      pages: [mockPage],
+      hasMore: false,
+      nextCursor: undefined,
+    }),
   searchPagesByTitle: jest
     .fn<typeof NotionService.prototype.searchPagesByTitle>()
-    .mockResolvedValue([mockPage]),
+    .mockResolvedValue({
+      pages: [mockPage],
+      hasMore: false,
+      nextCursor: undefined,
+    }),
   getPage: jest
     .fn<typeof NotionService.prototype.getPage>()
     .mockResolvedValue(mockPage),

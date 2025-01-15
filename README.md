@@ -63,7 +63,6 @@ Before using this server, you'll need:
 
 4. **MCP-Compatible Client**
    - [Systemprompt MCP Client](https://github.com/Ejb503/multimodal-mcp-client)
-   - Claude Desktop
    - Any other MCP-compatible client
 
 ## Quick Start
@@ -115,15 +114,6 @@ Before using this server, you'll need:
        }
      }
    }
-   ```
-
-4. **Basic Usage**
-
-   ```typescript
-   import { NotionMCPServer } from "systemprompt-mcp-notion";
-
-   const server = new NotionMCPServer();
-   server.start();
    ```
 
 ## Development

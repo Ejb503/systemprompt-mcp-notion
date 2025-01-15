@@ -33,15 +33,18 @@ export async function handleToolCall(
       // Page Search and Retrieval
       case "systemprompt_search_notion_pages": {
         const args = request.params.arguments as unknown as SearchPagesArgs;
-        const pages = await notion.searchPages(args.query, args.maxResults);
-        console.log("Search pages result:", pages);
+        const searchResult = await notion.searchPages(
+          args.query,
+          args.maxResults
+        );
+        console.log("Search pages result:", searchResult);
         return {
           content: [
             {
               type: "resource" as const,
               resource: {
                 uri: "notion://pages",
-                text: JSON.stringify(pages, null, 2),
+                text: JSON.stringify(searchResult.pages, null, 2),
                 mimeType: "application/json",
               },
             },
@@ -52,7 +55,7 @@ export async function handleToolCall(
       case "systemprompt_search_notion_pages_by_title": {
         const args = request.params
           .arguments as unknown as SearchPagesByTitleArgs;
-        const pages = await notion.searchPagesByTitle(
+        const searchResult = await notion.searchPagesByTitle(
           args.title,
           args.maxResults
         );
@@ -62,7 +65,7 @@ export async function handleToolCall(
               type: "resource" as const,
               resource: {
                 uri: "notion://pages",
-                text: JSON.stringify(pages, null, 2),
+                text: JSON.stringify(searchResult.pages, null, 2),
                 mimeType: "application/json",
               },
             },

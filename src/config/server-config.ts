@@ -3,7 +3,22 @@ import {
   ServerCapabilities,
 } from "@modelcontextprotocol/sdk/types.js";
 
-export const serverConfig: Implementation = {
+interface ServerMetadata {
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  serverStartTime: number;
+  environment: string | undefined;
+  customData: {
+    serverFeatures: string[];
+    supportedAPIs: string[];
+    authProvider: string;
+    requiredCapabilities: string[];
+  };
+}
+
+export const serverConfig: Implementation & { metadata: ServerMetadata } = {
   name: "systemprompt-mcp-notion",
   version: "1.0.0",
   metadata: {

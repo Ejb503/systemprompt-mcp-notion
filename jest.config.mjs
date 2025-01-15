@@ -4,33 +4,28 @@ export default {
   testEnvironment: "node",
   extensionsToTreatAsEsm: [".ts", ".mts"],
   moduleNameMapper: {
-    "^(\\.{1,2}/.*)\\.js$": "$1",
+    "(.+)\\.js": "$1",
   },
   transform: {
-    "^.+\\.tsx?$": [
+    "^.+\\.ts$": [
       "ts-jest",
       {
-        tsconfig: "tsconfig.test.json",
-        useESM: true,
+        tsconfig: "tsconfig.json",
         diagnostics: {
-          ignoreCodes: [2571, 6133, 6196, 2322, 2345],
+          ignoreCodes: [1343],
         },
       },
     ],
   },
-  testMatch: ["**/__tests__/**/*.test.ts"],
-  globals: {
-    "ts-jest": {
-      isolatedModules: true,
-      useESM: true,
-    },
-  },
-  collectCoverageFrom: [
-    "src/**/*.{ts,tsx}",
-    "!src/**/*.d.ts",
-    "!src/**/__tests__/**",
-    "!src/**/__mocks__/**",
+  transformIgnorePatterns: [
+    "/node_modules/(?!(@modelcontextprotocol|@notionhq|zod))",
   ],
-  coverageReporters: ["lcov", "text", "text-summary"],
-  coverageDirectory: "coverage",
+  testMatch: ["**/__tests__/**/*.test.ts"],
+  collectCoverage: true,
+  collectCoverageFrom: [
+    "src/**/*.ts",
+    "!src/**/*.test.ts",
+    "!src/**/*.d.ts",
+    "!src/types/**/*",
+  ],
 };

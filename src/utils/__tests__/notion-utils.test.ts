@@ -99,7 +99,10 @@ describe("notion-utils", () => {
       } as PageObjectResponse;
 
       const result = mapPageToNotionPage(page);
-      expect(result.parent).toEqual({ type: "database_id", id: "db-id" });
+      expect(result.parent).toEqual({
+        type: "database_id",
+        database_id: "db-id",
+      });
     });
 
     it("should map page parent correctly", () => {
@@ -109,7 +112,7 @@ describe("notion-utils", () => {
       } as PageObjectResponse;
 
       const result = mapPageToNotionPage(page);
-      expect(result.parent).toEqual({ type: "page_id", id: "parent-id" });
+      expect(result.parent).toEqual({ type: "page_id", page_id: "parent-id" });
     });
 
     it("should map workspace parent correctly", () => {
@@ -119,7 +122,7 @@ describe("notion-utils", () => {
       } as PageObjectResponse;
 
       const result = mapPageToNotionPage(page);
-      expect(result.parent).toEqual({ type: "workspace", id: "workspace" });
+      expect(result.parent).toEqual({ type: "workspace", workspace: true });
     });
   });
 
