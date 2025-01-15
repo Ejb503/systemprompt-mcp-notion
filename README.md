@@ -1,7 +1,7 @@
 # systemprompt-mcp-notion
 
 [![npm version](https://img.shields.io/npm/v/systemprompt-mcp-notion.svg)](https://www.npmjs.com/package/systemprompt-mcp-notion)
-[![Coverage Status](https://coveralls.io/repos/github/systemprompt-io/systemprompt-mcp-notion/badge.svg?branch=main)](https://coveralls.io/github/systemprompt-io/systemprompt-mcp-notion?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/Ejb503/mcp-server-systemprompt-notion/badge.svg?branch=main)](https://coveralls.io/github/Ejb503/mcp-server-systemprompt-notion?branch=main)
 [![Twitter Follow](https://img.shields.io/twitter/follow/tyingshoelaces_?style=social)](https://twitter.com/tyingshoelaces_)
 [![Discord](https://img.shields.io/discord/1255160891062620252?color=7289da&label=discord)](https://discord.com/invite/wkAbSuPWpr)
 
@@ -82,7 +82,42 @@ Before using this server, you'll need:
    NOTION_API_KEY=your_notion_integration_token
    ```
 
-3. **Basic Usage**
+3. **MCP Configuration**
+   Add the following to your MCP configuration JSON:
+
+   ```json
+   {
+     "mcpServers": {
+       "notion": {
+         "command": "npx",
+         "args": ["systemprompt-mcp-notion"],
+         "env": {
+           "SYSTEMPROMPT_API_KEY": "your_systemprompt_api_key",
+           "NOTION_API_KEY": "your_notion_integration_token"
+         }
+       }
+     }
+   }
+   ```
+
+   Alternatively, if you've installed the package locally:
+
+   ```json
+   {
+     "mcpServers": {
+       "notion": {
+         "command": "node",
+         "args": ["./node_modules/systemprompt-mcp-notion/build/index.js"],
+         "env": {
+           "SYSTEMPROMPT_API_KEY": "your_systemprompt_api_key",
+           "NOTION_API_KEY": "your_notion_integration_token"
+         }
+       }
+     }
+   }
+   ```
+
+4. **Basic Usage**
 
    ```typescript
    import { NotionMCPServer } from "systemprompt-mcp-notion";
@@ -131,42 +166,3 @@ npm run test:coverage
 # Test Notion API connection
 npm run test:notion
 ```
-
-### Code Quality
-
-- **Linting**: ESLint with TypeScript support
-
-  ```bash
-  npm run lint
-  npm run lint:fix
-  ```
-
-- **Type Checking**: TypeScript with strict mode
-
-  ```bash
-  npm run build
-  ```
-
-- **Continuous Integration**
-  - Automated tests on pull requests
-  - Coverage reporting to Coveralls
-  - Dependency security scanning
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## Support
-
-- 📖 [Documentation](https://systemprompt.io/documentation)
-- 💬 [Discord Community](https://discord.com/invite/wkAbSuPWpr)
-- 🐛 [Issue Tracker](https://github.com/systemprompt-io/systemprompt-mcp-notion/issues)
-- 📧 [Email Support](mailto:support@systemprompt.io)
-
-## License
-
-MIT © [SystemPrompt](https://systemprompt.io)

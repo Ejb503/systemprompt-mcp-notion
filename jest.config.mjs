@@ -25,4 +25,12 @@ export default {
       useESM: true,
     },
   },
+  collectCoverageFrom: [
+    "src/**/*.{ts,tsx}",
+    "!src/**/*.d.ts",
+    "!src/**/__tests__/**",
+    "!src/**/__mocks__/**",
+  ],
+  coverageReporters: ["lcov", "text", "text-summary"],
+  coverageDirectory: "coverage",
 };
