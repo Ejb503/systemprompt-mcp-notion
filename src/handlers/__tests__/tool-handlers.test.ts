@@ -275,6 +275,109 @@ describe("Tool Handlers", () => {
 
         await expect(handleToolCall(request)).rejects.toThrow("Page not found");
       });
+
+      it("should handle systemprompt_search_notion_pages_by_title", async () => {
+        const request: CallToolRequest = {
+          method: "tools/call",
+          params: {
+            name: "systemprompt_search_notion_pages_by_title",
+            arguments: {
+              title: "test title",
+              maxResults: 10,
+            },
+          },
+        };
+
+        const result = await handleToolCall(request);
+        expect(mockNotionService.searchPagesByTitle).toHaveBeenCalledWith(
+          "test title",
+          10
+        );
+        expect(result).toEqual({
+          content: [
+            {
+              type: "resource",
+              resource: {
+                uri: "notion://pages",
+                text: JSON.stringify([mockPage], null, 2),
+                mimeType: "application/json",
+              },
+            },
+          ],
+        });
+      });
+
+      it("should reject invalid parent object in create page", async () => {
+        const request: CallToolRequest = {
+          method: "tools/call",
+          params: {
+            name: "systemprompt_create_notion_page",
+            arguments: {
+              parent: "invalid",
+              properties: {},
+            },
+          },
+        };
+
+        await expect(handleToolCall(request)).rejects.toThrow(
+          "Parent must be a valid object"
+        );
+      });
+
+      it("should reject missing parent type in create page", async () => {
+        const request: CallToolRequest = {
+          method: "tools/call",
+          params: {
+            name: "systemprompt_create_notion_page",
+            arguments: {
+              parent: {},
+              properties: {},
+            },
+          },
+        };
+
+        await expect(handleToolCall(request)).rejects.toThrow(
+          "Parent must have either database_id or page_id"
+        );
+      });
+
+      it("should reject invalid properties object in create page", async () => {
+        const request: CallToolRequest = {
+          method: "tools/call",
+          params: {
+            name: "systemprompt_create_notion_page",
+            arguments: {
+              parent: { database_id: "db123" },
+              properties: "invalid",
+            },
+          },
+        };
+
+        await expect(handleToolCall(request)).rejects.toThrow(
+          "Properties must be a valid object"
+        );
+      });
+
+      it("should reject missing title property in database page", async () => {
+        const request: CallToolRequest = {
+          method: "tools/call",
+          params: {
+            name: "systemprompt_create_notion_page",
+            arguments: {
+              parent: { database_id: "db123" },
+              properties: {
+                description: {
+                  rich_text: [{ text: { content: "Description" } }],
+                },
+              },
+            },
+          },
+        };
+
+        await expect(handleToolCall(request)).rejects.toThrow(
+          "When creating a page in a database, properties must include a title field"
+        );
+      });
     });
 
     describe("Comments", () => {

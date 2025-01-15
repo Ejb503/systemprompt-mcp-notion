@@ -3,7 +3,7 @@ import type {
   SearchParameters,
 } from "@notionhq/client/build/src/api-endpoints.d.ts";
 
-export type NotionParentType = "database_id" | "page_id";
+export type NotionParentType = "database_id" | "page_id" | "workspace";
 
 export interface NotionParent {
   type: NotionParentType;
