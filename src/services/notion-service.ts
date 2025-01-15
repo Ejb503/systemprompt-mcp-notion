@@ -1,5 +1,4 @@
 import { Client } from "@notionhq/client";
-import { collectPaginatedAPI } from "@notionhq/client";
 import type {
   PageObjectResponse,
   DatabaseObjectResponse,
@@ -20,7 +19,6 @@ import {
 import {
   isFullPage,
   mapPageToNotionPage,
-  extractTitle,
   extractDatabaseTitle,
 } from "../utils/notion-utils.js";
 
@@ -110,27 +108,23 @@ export class NotionService {
     databaseId: string,
     maxResults: number = 10
   ): Promise<NotionPage[]> {
-    const pages = await collectPaginatedAPI(this.client.databases.query, {
+    const response = await this.client.databases.query({
       database_id: databaseId,
       page_size: maxResults,
     });
 
-    return pages.filter(isFullPage).map(mapPageToNotionPage);
+    return response.results.filter(isFullPage).map(mapPageToNotionPage);
   }
 
   async listDatabases(maxResults: number = 10): Promise<NotionDatabase[]> {
-    const response = await this.client.search({
-      filter: {
-        property: "object",
-        value: "database",
-      },
+    const response = await this.client.databases.list({
       page_size: maxResults,
     });
 
     return response.results
       .filter(
         (database): database is DatabaseObjectResponse =>
-          database.object === "database"
+          "title" in database && "url" in database && "created_time" in database
       )
       .map((database) => ({
         id: database.id,

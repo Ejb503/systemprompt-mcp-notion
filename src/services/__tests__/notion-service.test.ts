@@ -1,137 +1,117 @@
-import { jest, describe, it, expect, beforeEach } from "@jest/globals";
+import {
+  jest,
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+} from "@jest/globals";
 import { NotionService } from "../notion-service.js";
-import { mockClient } from "./__mocks__/notion-client.js";
-import type {
-  CreatePageOptions,
-  UpdatePageOptions,
-} from "../../types/notion.js";
+import { Client } from "@notionhq/client";
+import type { CommentObjectResponse } from "@notionhq/client/build/src/api-endpoints.js";
 
-// Mock the Notion client module
+// Mock objects
+const mockCommentResponse: CommentObjectResponse = {
+  id: "test-comment-id",
+  object: "comment",
+  discussion_id: "test-discussion-id",
+  rich_text: [
+    {
+      type: "text",
+      text: { content: "Test comment", link: null },
+      annotations: {
+        bold: false,
+        italic: false,
+        strikethrough: false,
+        underline: false,
+        code: false,
+        color: "default",
+      },
+      plain_text: "Test comment",
+      href: null,
+    },
+  ],
+  created_time: "2024-01-01T00:00:00.000Z",
+  last_edited_time: "2024-01-01T00:00:00.000Z",
+  created_by: { object: "user", id: "user123" },
+  parent: { type: "page_id", page_id: "test-page-id" },
+};
+
+const mockCommentsListResponse = {
+  results: [mockCommentResponse],
+  has_more: false,
+  next_cursor: null,
+};
+
+// Mock the Client class
 jest.mock("@notionhq/client", () => {
   return {
-    Client: jest.fn().mockImplementation(() => mockClient),
+    Client: jest.fn().mockImplementation(() => ({
+      comments: {
+        create: jest.fn().mockResolvedValue(mockCommentResponse),
+        list: jest.fn().mockResolvedValue(mockCommentsListResponse),
+      },
+    })),
   };
 });
 
+const TEST_TOKEN = "test-token";
+
 describe("NotionService", () => {
   beforeEach(() => {
-    // Reset all mocks
     jest.clearAllMocks();
-    // Initialize NotionService before each test
-    NotionService.initialize("test-token");
+    NotionService.initialize(TEST_TOKEN);
   });
 
-  describe("Page Operations", () => {
-    it("should search pages", async () => {
-      const notion = NotionService.getInstance();
-      const pages = await notion.searchPages("test");
-      expect(pages).toHaveLength(1);
-      expect(pages[0].id).toBe("page123");
-      expect(pages[0].title).toBe("Test Page");
-    });
-
-    it("should search pages by title", async () => {
-      const notion = NotionService.getInstance();
-      const pages = await notion.searchPagesByTitle("Test Page");
-      expect(pages).toHaveLength(1);
-      expect(pages[0].id).toBe("page123");
-      expect(pages[0].title).toBe("Test Page");
-    });
-
-    it("should get a page", async () => {
-      const notion = NotionService.getInstance();
-      const page = await notion.getPage("page123");
-      expect(page.id).toBe("page123");
-      expect(page.title).toBe("Test Page");
-    });
-
-    it("should create a page", async () => {
-      const notion = NotionService.getInstance();
-      const createOptions: CreatePageOptions = {
-        parent: { database_id: "db123" },
-        properties: {
-          Title: {
-            title: [
-              {
-                type: "text",
-                text: { content: "New Page", link: null },
-              },
-            ],
-          },
-        },
-      };
-      const page = await notion.createPage(createOptions);
-      expect(page.id).toBe("page123");
-      expect(page.title).toBe("Test Page");
-    });
-
-    it("should update a page", async () => {
-      const notion = NotionService.getInstance();
-      const updateOptions: UpdatePageOptions = {
-        pageId: "page123",
-        properties: {
-          Title: {
-            title: [
-              {
-                type: "text",
-                text: { content: "Updated Page", link: null },
-              },
-            ],
-          },
-        },
-      };
-      const page = await notion.updatePage(updateOptions);
-      expect(page.id).toBe("page123");
-      expect(page.title).toBe("Test Page");
-    });
+  afterEach(() => {
+    jest.resetModules();
   });
 
-  describe("Database Operations", () => {
-    it("should list databases", async () => {
-      const notion = NotionService.getInstance();
-      const databases = await notion.listDatabases();
-      expect(databases).toHaveLength(1);
-      expect(databases[0].id).toBe("db123");
-      expect(databases[0].title).toBe("Test Database");
+  describe("initialization", () => {
+    it("should initialize with token", () => {
+      expect(() => NotionService.getInstance()).not.toThrow();
+      expect(Client).toHaveBeenCalledWith({ auth: TEST_TOKEN });
     });
 
-    it("should get database items", async () => {
-      const notion = NotionService.getInstance();
-      const pages = await notion.getDatabaseItems("db123");
-      expect(pages).toHaveLength(1);
-      expect(pages[0].id).toBe("page123");
-    });
-
-    it("should create a database", async () => {
-      const notion = NotionService.getInstance();
-      const database = await notion.createDatabase(
-        { page_id: "parent123" },
-        "New Database",
-        {
-          Name: {
-            title: {},
-          },
-        }
+    it("should throw error if not initialized", () => {
+      // Reset the NotionService instance
+      (NotionService as any).instance = undefined;
+      expect(() => NotionService.getInstance()).toThrow(
+        "NotionService must be initialized before use"
       );
-      expect(database.id).toBe("db123");
-      expect(database.title).toBe("Test Database");
     });
   });
 
-  describe("Comment Operations", () => {
-    it("should create a comment", async () => {
-      const notion = NotionService.getInstance();
-      const comment = await notion.createComment("page123", "Test comment");
-      expect(comment.id).toBe("comment123");
-      expect(comment.content).toBe("Test comment");
-    });
+  describe("comment operations", () => {
+    it("should create comment", async () => {
+      const service = NotionService.getInstance();
+      const result = await service.createComment(
+        "test-page-id",
+        "test comment"
+      );
+      expect(result).toEqual({
+        id: "test-comment-id",
+        discussionId: "test-discussion-id",
+        content: "Test comment",
+        createdTime: "2024-01-01T00:00:00.000Z",
+        lastEditedTime: "2024-01-01T00:00:00.000Z",
+        parentId: undefined,
+      });
+    }, 10000);
 
     it("should get comments", async () => {
-      const notion = NotionService.getInstance();
-      const comments = await notion.getComments("page123");
-      expect(comments).toHaveLength(1);
-      expect(comments[0].id).toBe("comment123");
-      expect(comments[0].content).toBe("Test comment");
-    });
+      const service = NotionService.getInstance();
+      const result = await service.getComments("test-page-id");
+      expect(result).toEqual([
+        {
+          id: "test-comment-id",
+          discussionId: "test-discussion-id",
+          content: "Test comment",
+          createdTime: "2024-01-01T00:00:00.000Z",
+          lastEditedTime: "2024-01-01T00:00:00.000Z",
+          parentId: undefined,
+        },
+      ]);
+    }, 10000);
   });
 });

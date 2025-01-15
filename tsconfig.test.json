@@ -6,8 +6,18 @@
     "esModuleInterop": true,
     "allowJs": true,
     "checkJs": false,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "strict": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "noImplicitThis": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+    "allowUnreachableCode": true,
+    "skipLibCheck": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "**/*.test.ts", "**/*.test.tsx"],
   "exclude": ["node_modules"]
 }

@@ -41,10 +41,16 @@ export async function handleToolCall(
         const pages = await notion.searchPages(args.query, args.maxResults);
         console.log("Search pages result:", pages);
         return {
-          content: pages.map((page) => ({
-            type: "resource" as const,
-            resource: page,
-          })),
+          content: [
+            {
+              type: "resource" as const,
+              resource: {
+                uri: "notion://pages",
+                text: JSON.stringify(pages, null, 2),
+                mimeType: "application/json",
+              },
+            },
+          ],
         };
       }
 
@@ -56,10 +62,16 @@ export async function handleToolCall(
           args.maxResults
         );
         return {
-          content: pages.map((page) => ({
-            type: "resource" as const,
-            resource: page,
-          })),
+          content: [
+            {
+              type: "resource" as const,
+              resource: {
+                uri: "notion://pages",
+                text: JSON.stringify(pages, null, 2),
+                mimeType: "application/json",
+              },
+            },
+          ],
         };
       }
 
@@ -70,7 +82,11 @@ export async function handleToolCall(
           content: [
             {
               type: "resource" as const,
-              resource: page,
+              resource: {
+                uri: `notion://pages/${page.id}`,
+                text: JSON.stringify(page, null, 2),
+                mimeType: "application/json",
+              },
             },
           ],
         };
@@ -121,7 +137,11 @@ export async function handleToolCall(
           content: [
             {
               type: "resource" as const,
-              resource: page,
+              resource: {
+                uri: `notion://pages/${page.id}`,
+                text: JSON.stringify(page, null, 2),
+                mimeType: "application/json",
+              },
             },
           ],
         };
@@ -137,7 +157,11 @@ export async function handleToolCall(
           content: [
             {
               type: "resource" as const,
-              resource: page,
+              resource: {
+                uri: `notion://pages/${page.id}`,
+                text: JSON.stringify(page, null, 2),
+                mimeType: "application/json",
+              },
             },
           ],
         };
@@ -149,10 +173,16 @@ export async function handleToolCall(
         const maxResults = args?.maxResults || 10;
         const databases = await notion.listDatabases(maxResults);
         return {
-          content: databases.map((database) => ({
-            type: "resource" as const,
-            resource: database,
-          })),
+          content: [
+            {
+              type: "resource" as const,
+              resource: {
+                uri: "notion://databases",
+                text: JSON.stringify(databases, null, 2),
+                mimeType: "application/json",
+              },
+            },
+          ],
         };
       }
 
@@ -164,10 +194,16 @@ export async function handleToolCall(
           args.maxResults
         );
         return {
-          content: items.map((item) => ({
-            type: "resource" as const,
-            resource: item,
-          })),
+          content: [
+            {
+              type: "resource" as const,
+              resource: {
+                uri: `notion://databases/${args.databaseId}/items`,
+                text: JSON.stringify(items, null, 2),
+                mimeType: "application/json",
+              },
+            },
+          ],
         };
       }
 
@@ -183,7 +219,11 @@ export async function handleToolCall(
           content: [
             {
               type: "resource" as const,
-              resource: comment,
+              resource: {
+                uri: `notion://comments/${comment.id}`,
+                text: JSON.stringify(comment, null, 2),
+                mimeType: "application/json",
+              },
             },
           ],
         };
@@ -193,10 +233,16 @@ export async function handleToolCall(
         const args = request.params.arguments as unknown as GetCommentsArgs;
         const comments = await notion.getComments(args.pageId);
         return {
-          content: comments.map((comment) => ({
-            type: "resource" as const,
-            resource: comment,
-          })),
+          content: [
+            {
+              type: "resource" as const,
+              resource: {
+                uri: `notion://pages/${args.pageId}/comments`,
+                text: JSON.stringify(comments, null, 2),
+                mimeType: "application/json",
+              },
+            },
+          ],
         };
       }
 

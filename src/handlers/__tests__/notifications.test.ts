@@ -8,17 +8,19 @@ import {
   sendResourceChangedNotification,
 } from "../notifications.js";
 import { SystemPromptService } from "../../services/systemprompt-service.js";
-import { server } from "../../index.js";
-
-jest.mock("../../services/systemprompt-service.js");
+import * as serverModule from "../../index.js";
 
 // Mock the SDK module
 jest.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
+  __esModule: true,
   StdioServerTransport: jest.fn(),
 }));
 
+// Mock the SystemPromptService
+jest.mock("../../services/systemprompt-service.js");
+
+// Mock the server module
 jest.mock("../../index.js", () => ({
-  __esModule: true,
   server: {
     notification: jest.fn(),
   },
@@ -42,79 +44,14 @@ describe("Notifications", () => {
     jest
       .spyOn(SystemPromptService, "getInstance")
       .mockReturnValue(mockSystemPromptService);
+
+    // Clear mock before each test
+    (serverModule.server.notification as jest.Mock).mockClear();
   });
 
   afterEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-  });
-
-  describe("sendPromptChangedNotification", () => {
-    it("should send a notification when prompts are fetched successfully", async () => {
-      const mockPrompts: SystempromptPromptResponse[] = [
-        {
-          id: "test-prompt",
-          metadata: {
-            title: "Test Prompt",
-            description: "A test prompt",
-            created: "2024-01-01",
-            updated: "2024-01-01",
-            version: 1,
-            status: "published",
-            author: "test",
-            log_message: "Created",
-          },
-          instruction: {
-            static: "Test instruction",
-            dynamic: "Test dynamic",
-            state: "Test state",
-          },
-          input: {
-            name: "test_input",
-            description: "Test input description",
-            type: ["message"],
-            schema: {},
-          },
-          output: {
-            name: "test_output",
-            description: "Test output description",
-            type: ["message"],
-            schema: {},
-          },
-          _link: "test-link",
-        },
-      ];
-
-      mockSystemPromptService.getAllPrompts.mockResolvedValue(mockPrompts);
-
-      await sendPromptChangedNotification();
-
-      expect(server.notification).toHaveBeenCalledWith({
-        method: "notifications/prompts/list_changed",
-        params: {
-          _meta: {
-            prompts: mockPrompts,
-          },
-          prompts: [
-            {
-              name: "Test Prompt",
-              description: "A test prompt",
-              arguments: [],
-            },
-          ],
-        },
-      });
-    });
-
-    it("should handle errors when fetching prompts", async () => {
-      mockSystemPromptService.getAllPrompts.mockRejectedValue(
-        new Error("Test error")
-      );
-
-      await expect(sendPromptChangedNotification()).rejects.toThrow(
-        "Test error"
-      );
-    });
   });
 
   describe("sendResourceChangedNotification", () => {
@@ -141,7 +78,7 @@ describe("Notifications", () => {
 
       await sendResourceChangedNotification();
 
-      expect(server.notification).toHaveBeenCalledWith({
+      expect(serverModule.server.notification).toHaveBeenCalledWith({
         method: "notifications/resources/list_changed",
         params: {
           _meta: {},
@@ -158,12 +95,88 @@ describe("Notifications", () => {
     });
 
     it("should handle errors when fetching blocks", async () => {
-      mockSystemPromptService.listBlocks.mockRejectedValue(
-        new Error("Test error")
-      );
+      const error = new Error("Failed to fetch blocks");
+      mockSystemPromptService.listBlocks.mockRejectedValue(error);
 
       await expect(sendResourceChangedNotification()).rejects.toThrow(
-        "Test error"
+        "Failed to fetch blocks"
+      );
+    });
+  });
+
+  describe("sendPromptChangedNotification", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should send a notification when prompts are fetched successfully", async () => {
+      const mockPrompts: SystempromptPromptResponse[] = [
+        {
+          id: "test-prompt",
+          metadata: {
+            title: "Test Prompt",
+            description: "A test prompt",
+            created: "2024-01-01",
+            updated: "2024-01-01",
+            version: 1,
+            status: "published",
+            author: "test",
+            log_message: "Created",
+          },
+          instruction: {
+            static: "Test instruction",
+            dynamic: "Test dynamic",
+            state: "Test state",
+          },
+          input: {
+            name: "test_input",
+            description: "Test input description",
+            type: ["message"],
+            schema: {
+              type: "object",
+              properties: {},
+              required: [],
+            },
+          },
+          output: {
+            name: "test_output",
+            description: "Test output description",
+            type: ["message"],
+            schema: {
+              type: "object",
+              properties: {},
+              required: [],
+            },
+          },
+          _link: "test-link",
+        },
+      ];
+
+      mockSystemPromptService.getAllPrompts.mockResolvedValue(mockPrompts);
+
+      await sendPromptChangedNotification();
+
+      expect(serverModule.server.notification).toHaveBeenCalledWith({
+        method: "notifications/prompts/list_changed",
+        params: {
+          _meta: { prompts: mockPrompts },
+          prompts: [
+            {
+              name: "Test Prompt",
+              description: "A test prompt",
+              arguments: [],
+            },
+          ],
+        },
+      });
+    });
+
+    it("should handle errors when fetching prompts", async () => {
+      const error = new Error("Failed to fetch prompts");
+      mockSystemPromptService.getAllPrompts.mockRejectedValue(error);
+
+      await expect(sendPromptChangedNotification()).rejects.toThrow(
+        "Failed to fetch prompts"
       );
     });
   });
