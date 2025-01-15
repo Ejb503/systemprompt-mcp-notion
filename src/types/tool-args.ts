@@ -1,7 +1,4 @@
-import type {
-  CreatePageParameters,
-  CreateDatabaseParameters,
-} from "@notionhq/client/build/src/api-endpoints.d.ts";
+import type { CreatePageParameters } from "@notionhq/client/build/src/api-endpoints.d.ts";
 
 export interface SearchPagesArgs {
   query: string;
@@ -10,11 +7,6 @@ export interface SearchPagesArgs {
 
 export interface GetPageArgs {
   pageId: string;
-}
-
-export interface GetDatabaseItemsArgs {
-  databaseId: string;
-  maxResults?: number;
 }
 
 export type CreatePageArgs = {
@@ -48,14 +40,4 @@ export interface CreateCommentArgs {
 
 export interface GetCommentsArgs {
   pageId: string;
-}
-
-export interface CreateDatabaseArgs {
-  parent: { page_id: string };
-  title: string;
-  properties: CreateDatabaseParameters["properties"];
-}
-
-export interface ListDatabasesArgs {
-  maxResults?: number;
 }

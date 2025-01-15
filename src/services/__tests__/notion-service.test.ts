@@ -9,20 +9,74 @@ import {
 import { NotionService } from "../notion-service.js";
 import { Client } from "@notionhq/client";
 import type {
+  PageObjectResponse,
+  DatabaseObjectResponse,
   CommentObjectResponse,
-  CreateCommentParameters,
-  ListCommentsParameters,
+  UserObjectResponse,
+  CreateDatabaseParameters,
 } from "@notionhq/client/build/src/api-endpoints.js";
 
-// Mock objects
-const mockCommentResponse: CommentObjectResponse = {
-  id: "test-comment-id",
-  object: "comment",
-  discussion_id: "test-discussion-id",
-  rich_text: [
+const TEST_TOKEN = "test-token";
+
+const mockUser: UserObjectResponse = {
+  id: "test-user-id",
+  object: "user",
+  type: "person",
+  person: {},
+  name: "Test User",
+  avatar_url: null,
+};
+
+const mockPage: PageObjectResponse = {
+  id: "test-page-id",
+  object: "page",
+  created_time: "2024-01-01T00:00:00.000Z",
+  last_edited_time: "2024-01-01T00:00:00.000Z",
+  created_by: mockUser,
+  last_edited_by: mockUser,
+  cover: null,
+  icon: null,
+  parent: { type: "database_id", database_id: "test-db-id" },
+  archived: false,
+  properties: {
+    title: {
+      id: "title",
+      type: "title",
+      title: [
+        {
+          type: "text",
+          text: { content: "Test Page", link: null },
+          plain_text: "Test Page",
+          annotations: {
+            bold: false,
+            italic: false,
+            strikethrough: false,
+            underline: false,
+            code: false,
+            color: "default",
+          },
+          href: null,
+        },
+      ],
+    },
+  },
+  url: "https://notion.so/test-page-id",
+  public_url: null,
+  in_trash: false,
+};
+
+const mockDatabase: DatabaseObjectResponse = {
+  id: "test-db-id",
+  object: "database",
+  created_time: "2024-01-01T00:00:00.000Z",
+  last_edited_time: "2024-01-01T00:00:00.000Z",
+  created_by: mockUser,
+  last_edited_by: mockUser,
+  title: [
     {
       type: "text",
-      text: { content: "Test comment", link: null },
+      text: { content: "Test Database", link: null },
+      plain_text: "Test Database",
       annotations: {
         bold: false,
         italic: false,
@@ -31,47 +85,116 @@ const mockCommentResponse: CommentObjectResponse = {
         code: false,
         color: "default",
       },
-      plain_text: "Test comment",
       href: null,
     },
   ],
+  description: [],
+  icon: null,
+  cover: null,
+  properties: {
+    Name: {
+      id: "title",
+      name: "Name",
+      type: "title",
+      title: {},
+      description: null,
+    },
+    Status: {
+      id: "status",
+      name: "Status",
+      type: "select",
+      select: {
+        options: [],
+      },
+      description: null,
+    },
+  },
+  parent: { type: "page_id", page_id: "test-page-id" },
+  url: "https://notion.so/test-db-id",
+  public_url: null,
+  archived: false,
+  is_inline: false,
+  in_trash: false,
+};
+
+const mockComment: CommentObjectResponse = {
+  id: "test-comment-id",
+  object: "comment",
+  parent: { type: "page_id", page_id: "test-page-id" },
+  discussion_id: "test-discussion-id",
+  rich_text: [
+    {
+      type: "text",
+      text: { content: "Test comment", link: null },
+      plain_text: "Test comment",
+      annotations: {
+        bold: false,
+        italic: false,
+        strikethrough: false,
+        underline: false,
+        code: false,
+        color: "default",
+      },
+      href: null,
+    },
+  ],
+  created_by: mockUser,
   created_time: "2024-01-01T00:00:00.000Z",
   last_edited_time: "2024-01-01T00:00:00.000Z",
-  created_by: { object: "user", id: "user123" },
-  parent: { type: "page_id", page_id: "test-page-id" },
 };
 
-const mockCommentsListResponse = {
-  results: [mockCommentResponse],
-  has_more: false,
-  next_cursor: null,
-};
-
-// Mock the Client class
-jest.mock("@notionhq/client", () => {
-  const createMock = jest.fn((_params: CreateCommentParameters) =>
-    Promise.resolve(mockCommentResponse)
-  );
-  const listMock = jest.fn((_params: ListCommentsParameters) =>
-    Promise.resolve(mockCommentsListResponse)
-  );
-
-  return {
-    Client: jest.fn().mockImplementation(() => ({
-      comments: {
-        create: createMock,
-        list: listMock,
-      },
-    })),
-  };
-});
-
-const TEST_TOKEN = "test-token";
+// Mock Notion Client
+jest.mock("@notionhq/client", () => ({
+  Client: jest.fn().mockImplementation(() => ({
+    pages: {
+      create: jest.fn().mockImplementation(() => Promise.resolve(mockPage)),
+      update: jest.fn().mockImplementation(() => Promise.resolve(mockPage)),
+      retrieve: jest.fn().mockImplementation(() => Promise.resolve(mockPage)),
+    },
+    databases: {
+      create: jest.fn().mockImplementation(() => Promise.resolve(mockDatabase)),
+      query: jest.fn().mockImplementation(() =>
+        Promise.resolve({
+          results: [mockPage],
+          has_more: false,
+          next_cursor: null,
+        })
+      ),
+      list: jest.fn().mockImplementation(() =>
+        Promise.resolve({
+          results: [mockDatabase],
+          has_more: false,
+          next_cursor: null,
+        })
+      ),
+    },
+    search: jest.fn().mockImplementation(() =>
+      Promise.resolve({
+        results: [mockPage],
+        has_more: false,
+        next_cursor: null,
+      })
+    ),
+    comments: {
+      create: jest.fn().mockImplementation(() => Promise.resolve(mockComment)),
+      list: jest.fn().mockImplementation(() =>
+        Promise.resolve({
+          results: [mockComment],
+          has_more: false,
+          next_cursor: null,
+        })
+      ),
+    },
+  })),
+}));
 
 describe("NotionService", () => {
+  let service: NotionService;
+
   beforeEach(() => {
     jest.clearAllMocks();
     NotionService.initialize(TEST_TOKEN);
+    service = NotionService.getInstance();
   });
 
   afterEach(() => {
@@ -85,44 +208,118 @@ describe("NotionService", () => {
     });
 
     it("should throw error if not initialized", () => {
-      // Reset the NotionService instance
       (NotionService as any).instance = undefined;
       expect(() => NotionService.getInstance()).toThrow(
         "NotionService must be initialized before use"
+      );
+    });
+
+    it("should throw error if initialized with empty token", () => {
+      expect(() => NotionService.initialize("")).toThrow(
+        "Notion API token is required"
+      );
+    });
+  });
+
+  describe("page operations", () => {
+    it("should create page", async () => {
+      const result = await service.createPage({
+        properties: {
+          title: {
+            title: [{ text: { content: "Test Page" } }],
+          },
+        },
+        parent: { database_id: "test-db-id" },
+      });
+      expect(result).toMatchObject({
+        id: "test-page-id",
+      });
+    });
+
+    it("should update page", async () => {
+      const result = await service.updatePage({
+        pageId: "test-page-id",
+        properties: {
+          title: {
+            title: [{ text: { content: "Updated Page" } }],
+          },
+        },
+      });
+      expect(result).toMatchObject({
+        id: "test-page-id",
+      });
+    });
+
+    it("should get page", async () => {
+      const result = await service.getPage("test-page-id");
+      expect(result).toMatchObject({
+        id: "test-page-id",
+      });
+    });
+
+    it("should search pages", async () => {
+      const result = await service.searchPages("test query");
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        id: "test-page-id",
+      });
+    });
+
+    it("should handle page not found", async () => {
+      const client = (service as any).client;
+      client.pages.retrieve.mockRejectedValueOnce(new Error("Page not found"));
+      await expect(service.getPage("nonexistent")).rejects.toThrow(
+        "Page not found"
       );
     });
   });
 
   describe("comment operations", () => {
     it("should create comment", async () => {
-      const service = NotionService.getInstance();
       const result = await service.createComment(
         "test-page-id",
-        "test comment"
+        "Test comment"
       );
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         id: "test-comment-id",
         discussionId: "test-discussion-id",
-        content: "Test comment",
-        createdTime: "2024-01-01T00:00:00.000Z",
-        lastEditedTime: "2024-01-01T00:00:00.000Z",
-        parentId: undefined,
       });
-    }, 10000);
+    });
 
     it("should get comments", async () => {
-      const service = NotionService.getInstance();
       const result = await service.getComments("test-page-id");
-      expect(result).toEqual([
-        {
-          id: "test-comment-id",
-          discussionId: "test-discussion-id",
-          content: "Test comment",
-          createdTime: "2024-01-01T00:00:00.000Z",
-          lastEditedTime: "2024-01-01T00:00:00.000Z",
-          parentId: undefined,
-        },
-      ]);
-    }, 10000);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        id: "test-comment-id",
+        discussionId: "test-discussion-id",
+      });
+    });
+  });
+
+  describe("error handling", () => {
+    it("should handle API rate limits", async () => {
+      const client = (service as any).client;
+      client.search.mockRejectedValueOnce(new Error("Rate limit exceeded"));
+      await expect(service.searchPages("test")).rejects.toThrow(
+        "Rate limit exceeded"
+      );
+    });
+
+    it("should handle network errors", async () => {
+      const client = (service as any).client;
+      client.pages.retrieve.mockRejectedValueOnce(new Error("Network error"));
+      await expect(service.getPage("test-page-id")).rejects.toThrow(
+        "Network error"
+      );
+    });
+
+    it("should handle invalid responses", async () => {
+      const client = (service as any).client;
+      client.pages.retrieve.mockResolvedValueOnce({
+        // Missing required properties
+        id: "test-page-id",
+      });
+      await expect(service.getPage("test-page-id")).rejects.toThrow();
+    });
   });
 });

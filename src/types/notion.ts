@@ -1,14 +1,14 @@
 import type {
-  PageObjectResponse,
-  DatabaseObjectResponse,
   CreatePageParameters,
   SearchParameters,
 } from "@notionhq/client/build/src/api-endpoints.d.ts";
 
-export type NotionParentType = Extract<
-  PageObjectResponse["parent"]["type"],
-  "database_id" | "page_id" | "workspace"
->;
+export type NotionParentType = "database_id" | "page_id";
+
+export interface NotionParent {
+  type: NotionParentType;
+  id: string;
+}
 
 export interface NotionPage {
   id: string;
@@ -16,18 +16,11 @@ export interface NotionPage {
   url: string;
   created_time: string;
   last_edited_time: string;
-  properties: PageObjectResponse["properties"];
+  properties: Record<string, unknown>;
   parent: {
     type: NotionParentType;
-    id: string;
+    [key: string]: string | NotionParentType;
   };
-}
-
-export interface NotionDatabase {
-  id: string;
-  title: string;
-  url: string;
-  properties: DatabaseObjectResponse["properties"];
 }
 
 export interface ListPagesOptions {

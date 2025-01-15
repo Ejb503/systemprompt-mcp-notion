@@ -1,4 +1,5 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { notionPropertySchemas } from "./notion-property-schemas.js";
 
 export const NOTION_TOOLS: Tool[] = [
   // Page Search and Retrieval
@@ -21,25 +22,7 @@ export const NOTION_TOOLS: Tool[] = [
       additionalProperties: false,
     },
   },
-  {
-    name: "systemprompt_search_notion_pages_by_title",
-    description: "Searches for Notion pages by their title.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        title: {
-          type: "string",
-          description: "Title text to search for",
-        },
-        maxResults: {
-          type: "number",
-          description: "Maximum number of results to return. Defaults to 10.",
-        },
-      },
-      required: ["title"],
-      additionalProperties: false,
-    },
-  },
+
   {
     name: "systemprompt_get_notion_page",
     description: "Retrieves a specific Notion page by its ID.",
@@ -55,8 +38,6 @@ export const NOTION_TOOLS: Tool[] = [
       additionalProperties: false,
     },
   },
-
-  // Page Creation and Updates
   {
     name: "systemprompt_create_notion_page",
     description:
@@ -105,7 +86,12 @@ export const NOTION_TOOLS: Tool[] = [
         properties: {
           type: "object",
           description: "Page properties in Notion API format",
-          additionalProperties: true,
+          patternProperties: {
+            "^.*$": {
+              oneOf: Object.values(notionPropertySchemas),
+            },
+          },
+          additionalProperties: false,
         },
         children: {
           type: "array",
@@ -133,50 +119,18 @@ export const NOTION_TOOLS: Tool[] = [
         properties: {
           type: "object",
           description: "Updated page properties in Notion API format",
-          additionalProperties: true,
+          patternProperties: {
+            "^.*$": {
+              oneOf: Object.values(notionPropertySchemas),
+            },
+          },
+          additionalProperties: false,
         },
       },
       required: ["pageId", "properties"],
       additionalProperties: false,
     },
   },
-
-  // Database Operations
-  {
-    name: "systemprompt_list_notion_databases",
-    description: "Lists all accessible Notion databases.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        maxResults: {
-          type: "number",
-          description: "Maximum number of databases to return. Defaults to 10.",
-        },
-      },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "systemprompt_get_database_items",
-    description: "Retrieves items from a specific Notion database.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        databaseId: {
-          type: "string",
-          description: "The ID of the Notion database to query",
-        },
-        maxResults: {
-          type: "number",
-          description: "Maximum number of items to return. Defaults to 10.",
-        },
-      },
-      required: ["databaseId"],
-      additionalProperties: false,
-    },
-  },
-
-  // Comments
   {
     name: "systemprompt_create_notion_comment",
     description: "Creates a comment on a Notion page.",

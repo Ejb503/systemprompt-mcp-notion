@@ -8,13 +8,11 @@ import { NotionService } from "../services/notion-service.js";
 import {
   SearchPagesArgs,
   GetPageArgs,
-  GetDatabaseItemsArgs,
   CreatePageArgs,
   UpdatePageArgs,
   SearchPagesByTitleArgs,
   CreateCommentArgs,
   GetCommentsArgs,
-  ListDatabasesArgs,
 } from "../types/tool-args.js";
 import { NOTION_TOOLS } from "../types/tool-schemas.js";
 
@@ -30,10 +28,7 @@ export async function handleToolCall(
   request: CallToolRequest
 ): Promise<CallToolResult> {
   try {
-    // Get the NotionService instance (it should already be initialized in tests)
     const notion = NotionService.getInstance();
-    console.log("Tool request:", request.params.name);
-
     switch (request.params.name) {
       // Page Search and Retrieval
       case "systemprompt_search_notion_pages": {
@@ -77,6 +72,9 @@ export async function handleToolCall(
 
       case "systemprompt_get_notion_page": {
         const args = request.params.arguments as unknown as GetPageArgs;
+        if (!args.pageId) {
+          throw new Error("Missing required argument: pageId");
+        }
         const page = await notion.getPage(args.pageId);
         return {
           content: [
@@ -167,47 +165,6 @@ export async function handleToolCall(
         };
       }
 
-      // Database Operations
-      case "systemprompt_list_notion_databases": {
-        const args = request.params.arguments as unknown as ListDatabasesArgs;
-        const maxResults = args?.maxResults || 10;
-        const databases = await notion.listDatabases(maxResults);
-        return {
-          content: [
-            {
-              type: "resource" as const,
-              resource: {
-                uri: "notion://databases",
-                text: JSON.stringify(databases, null, 2),
-                mimeType: "application/json",
-              },
-            },
-          ],
-        };
-      }
-
-      case "systemprompt_get_database_items": {
-        const args = request.params
-          .arguments as unknown as GetDatabaseItemsArgs;
-        const items = await notion.getDatabaseItems(
-          args.databaseId,
-          args.maxResults
-        );
-        return {
-          content: [
-            {
-              type: "resource" as const,
-              resource: {
-                uri: `notion://databases/${args.databaseId}/items`,
-                text: JSON.stringify(items, null, 2),
-                mimeType: "application/json",
-              },
-            },
-          ],
-        };
-      }
-
-      // Comments
       case "systemprompt_create_notion_comment": {
         const args = request.params.arguments as unknown as CreateCommentArgs;
         const comment = await notion.createComment(

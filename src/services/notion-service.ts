@@ -1,26 +1,19 @@
 import { Client } from "@notionhq/client";
 import type {
   PageObjectResponse,
-  DatabaseObjectResponse,
   CommentObjectResponse,
   CreatePageParameters,
   GetPagePropertyResponse,
-  CreateDatabaseParameters,
 } from "@notionhq/client/build/src/api-endpoints.d.ts";
 import {
   NotionPage,
-  NotionDatabase,
   ListPagesOptions,
   ListPagesResult,
   CreatePageOptions,
   UpdatePageOptions,
   NotionComment,
 } from "../types/notion.js";
-import {
-  isFullPage,
-  mapPageToNotionPage,
-  extractDatabaseTitle,
-} from "../utils/notion-utils.js";
+import { isFullPage, mapPageToNotionPage } from "../utils/notion-utils.js";
 
 export class NotionService {
   private static instance: NotionService;
@@ -33,6 +26,9 @@ export class NotionService {
   }
 
   public static initialize(token: string): void {
+    if (!token) {
+      throw new Error("Notion API token is required");
+    }
     if (!NotionService.instance) {
       NotionService.instance = new NotionService(token);
     }
@@ -102,38 +98,6 @@ export class NotionService {
     })) as PageObjectResponse;
 
     return mapPageToNotionPage(page);
-  }
-
-  async getDatabaseItems(
-    databaseId: string,
-    maxResults: number = 10
-  ): Promise<NotionPage[]> {
-    const response = await this.client.databases.query({
-      database_id: databaseId,
-      page_size: maxResults,
-    });
-
-    return response.results.filter(isFullPage).map(mapPageToNotionPage);
-  }
-
-  async listDatabases(maxResults: number = 10): Promise<NotionDatabase[]> {
-    const response = await this.client.databases.list({
-      page_size: maxResults,
-    });
-
-    return response.results
-      .filter(
-        (database): database is DatabaseObjectResponse =>
-          "title" in database && "url" in database && "created_time" in database
-      )
-      .map((database) => ({
-        id: database.id,
-        title: extractDatabaseTitle(database),
-        url: database.url,
-        properties: database.properties,
-        createdTime: database.created_time,
-        lastEditedTime: database.last_edited_time,
-      }));
   }
 
   async createPage(options: CreatePageOptions): Promise<NotionPage> {
@@ -246,29 +210,5 @@ export class NotionService {
       page_id: pageId,
       property_id: propertyId,
     });
-  }
-
-  async createDatabase(
-    parent: { page_id: string },
-    title: string,
-    properties: CreateDatabaseParameters["properties"]
-  ): Promise<NotionDatabase> {
-    const response = (await this.client.databases.create({
-      parent,
-      title: [
-        {
-          type: "text",
-          text: { content: title },
-        },
-      ],
-      properties,
-    })) as DatabaseObjectResponse;
-
-    return {
-      id: response.id,
-      title: extractDatabaseTitle(response),
-      url: response.url,
-      properties: response.properties,
-    };
   }
 }
