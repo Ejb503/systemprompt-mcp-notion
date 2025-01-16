@@ -10,30 +10,8 @@ export interface GetPageArgs {
 }
 
 export interface CreatePageArgs {
-  /**
-   * High-level instructions for how to create the page, including title, structure, and any special requirements.
-   * Example: "Create a meeting notes page titled 'Q4 Planning' with sections for agenda, attendees, and action items"
-   */
-  userInstructions?: string;
-
-  /**
-   * The actual content to be converted into Notion blocks, following Notion's markdown-like format.
-   * Example: "# Agenda\n1. Review Q3 metrics\n2. Plan Q4 initiatives\n\n# Action Items\n- [ ] Update roadmap\n- [ ] Schedule follow-ups"
-   */
-  contentInstructions?: string;
-
-  /**
-   * The parent object where the page will be created (database or page)
-   */
-  parent?: {
-    database_id?: string;
-    page_id?: string;
-  };
-
-  /**
-   * The properties of the page
-   */
-  properties?: Record<string, any>;
+  databaseId: string;
+  userInstructions: string;
 }
 
 export interface GetPagePropertyArgs {
@@ -68,3 +46,17 @@ export interface ListPagesArgs {
 export interface ListDatabasesArgs {
   maxResults?: number;
 }
+
+export type ToolResponse = {
+  content: {
+    type: "text" | "resource";
+    text: string;
+    resource?: {
+      uri: string;
+      text: string;
+      mimeType: string;
+    };
+  }[];
+  _meta?: Record<string, unknown>;
+  isError?: boolean;
+};

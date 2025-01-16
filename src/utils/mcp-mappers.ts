@@ -7,7 +7,7 @@ import {
 import type {
   SystempromptPromptResponse,
   SystempromptBlockResponse,
-} from "../types/index.js";
+} from "../types/systemprompt.js";
 
 /**
  * Maps input schema properties to MCP argument format.

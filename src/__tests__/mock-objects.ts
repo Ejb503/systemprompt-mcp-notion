@@ -1,6 +1,6 @@
 import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 import type { JSONSchema7TypeName } from "json-schema";
-import type { SystempromptPromptResponse } from "../types/index.js";
+import type { SystempromptPromptResponse } from "../types/systemprompt.js";
 
 // Basic mock with simple string input
 export const mockSystemPromptResult: SystempromptPromptResponse = {

@@ -7,31 +7,24 @@ import type {
 import type { NotionPage, NotionParent } from "../types/notion.js";
 
 export function isFullPage(obj: unknown): obj is PageObjectResponse {
-  console.log("Checking if object is a full page:", obj);
-
   if (!obj || typeof obj !== "object") {
-    console.log("Not an object");
     return false;
   }
 
   if (!("object" in obj) || !("parent" in obj)) {
-    console.log("Missing object or parent property");
     return false;
   }
 
   if ((obj as any).object !== "page") {
-    console.log("Not a page object");
     return false;
   }
 
   const parent = (obj as any).parent;
   if (!parent || typeof parent !== "object") {
-    console.log("Parent is not an object");
     return false;
   }
 
   if (!("type" in parent)) {
-    console.log("Parent missing type");
     return false;
   }
 
@@ -40,7 +33,6 @@ export function isFullPage(obj: unknown): obj is PageObjectResponse {
     parentType === "database_id" ||
     parentType === "page_id" ||
     parentType === "workspace";
-  console.log(`Parent type is ${parentType}, isValid: ${isValid}`);
 
   return isValid;
 }

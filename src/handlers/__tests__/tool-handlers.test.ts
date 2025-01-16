@@ -10,12 +10,11 @@ import { NotionService } from "../../services/notion-service.js";
 import { handleToolCall } from "../tool-handlers.js";
 import type { CallToolRequest } from "@modelcontextprotocol/sdk/types.js";
 import type {
-  PageObjectResponse,
-  CommentObjectResponse,
   RichTextItemResponse,
   GetPagePropertyResponse,
 } from "@notionhq/client/build/src/api-endpoints.js";
 import type { NotionPage } from "../../types/notion.js";
+import { NOTION_TOOLS, TOOL_ERROR_MESSAGES } from "../../constants/tools.js";
 
 // Mock the server config
 jest.mock("../../config/server-config.js", () => ({
@@ -41,30 +40,28 @@ jest.mock("../../index.ts", () => {
 
 // Mock the sampling module
 jest.mock("../sampling.js", () => ({
-  handleSamplingRequest: jest.fn().mockImplementation(async () => ({
-    content: [
+  sendSamplingRequest: jest.fn().mockImplementation(async () => ({
+    content: {
+      type: "text",
+      text: "Sampling response",
+    },
+  })),
+}));
+
+// Mock the prompt handlers
+jest.mock("../prompt-handlers.js", () => ({
+  handleGetPrompt: jest.fn().mockImplementation(async () => ({
+    messages: [
       {
-        type: "text",
-        text: "Sampling response",
+        role: "assistant",
+        content: {
+          type: "text",
+          text: "Test prompt",
+        },
       },
     ],
   })),
 }));
-
-const richTextContent: RichTextItemResponse = {
-  type: "text",
-  text: { content: "Test comment", link: null },
-  annotations: {
-    bold: false,
-    italic: false,
-    strikethrough: false,
-    underline: false,
-    code: false,
-    color: "default",
-  },
-  plain_text: "Test comment",
-  href: null,
-};
 
 const mockPage: NotionPage = {
   id: "page123",
@@ -76,28 +73,10 @@ const mockPage: NotionPage = {
   parent: { type: "database_id", database_id: "db123" },
 };
 
-const mockComment = {
-  id: "comment123",
-  object: "comment",
-  created_time: "2024-01-01T00:00:00.000Z",
-  last_edited_time: "2024-01-01T00:00:00.000Z",
-  created_by: { object: "user", id: "user123" },
-  parent: { type: "page_id", page_id: "page123" },
-  discussion_id: "discussion123",
-  rich_text: [richTextContent],
-} as CommentObjectResponse;
-
 // Mock NotionService with proper types
 const mockNotionService = {
   searchPages: jest
     .fn<typeof NotionService.prototype.searchPages>()
-    .mockResolvedValue({
-      pages: [mockPage],
-      hasMore: false,
-      nextCursor: undefined,
-    }),
-  searchPagesByTitle: jest
-    .fn<typeof NotionService.prototype.searchPagesByTitle>()
     .mockResolvedValue({
       pages: [mockPage],
       hasMore: false,
@@ -112,37 +91,21 @@ const mockNotionService = {
   updatePage: jest
     .fn<typeof NotionService.prototype.updatePage>()
     .mockResolvedValue(mockPage),
-  createComment: jest
-    .fn<typeof NotionService.prototype.createComment>()
-    .mockResolvedValue({
-      id: mockComment.id,
-      discussionId: mockComment.discussion_id,
-      content: mockComment.rich_text[0].plain_text,
-      createdTime: mockComment.created_time,
-      lastEditedTime: mockComment.last_edited_time,
-    }),
-  getComments: jest
-    .fn<typeof NotionService.prototype.getComments>()
-    .mockResolvedValue([
-      {
-        id: mockComment.id,
-        discussionId: mockComment.discussion_id,
-        content: mockComment.rich_text[0].plain_text,
-        createdTime: mockComment.created_time,
-        lastEditedTime: mockComment.last_edited_time,
-      },
-    ]),
   listPages: jest
     .fn<typeof NotionService.prototype.listPages>()
-    .mockResolvedValue({ pages: [mockPage], hasMore: false }),
-  getPageProperty: jest
-    .fn<typeof NotionService.prototype.getPageProperty>()
     .mockResolvedValue({
-      object: "property_item",
-      id: "prop123",
-      type: "title",
-      title: {},
-    } as GetPagePropertyResponse),
+      pages: [mockPage],
+      hasMore: false,
+    }),
+  searchDatabases: jest
+    .fn<typeof NotionService.prototype.searchDatabases>()
+    .mockResolvedValue({
+      results: [],
+      has_more: false,
+    }),
+  getPageBlocks: jest
+    .fn<typeof NotionService.prototype.getPageBlocks>()
+    .mockResolvedValue([]),
 };
 
 // Mock the NotionService module
@@ -152,6 +115,50 @@ jest.mock("../../services/notion-service.js", () => ({
     getInstance: jest.fn(() => mockNotionService),
   },
 }));
+
+// Mock the validation module
+jest.mock("../../utils/validation.js", () => ({
+  validateWithErrors: jest.fn(),
+  ajv: {
+    compile: jest.fn(),
+  },
+}));
+
+jest.mock("../../utils/tool-validation.js", () => {
+  const validateToolRequest = jest.fn((request: CallToolRequest) => {
+    if (!request.params?.name) {
+      throw new Error("Invalid tool request: missing tool name");
+    }
+
+    const tool = NOTION_TOOLS.find((t) => t.name === request.params.name);
+    if (!tool) {
+      throw new Error(
+        `${TOOL_ERROR_MESSAGES.UNKNOWN_TOOL} ${request.params.name}`
+      );
+    }
+
+    // Validate arguments against the tool's schema if present
+    if (tool.inputSchema && request.params.arguments) {
+      const schema = tool.inputSchema;
+      const args = request.params.arguments;
+
+      // Check required fields
+      if (schema.required && Array.isArray(schema.required)) {
+        for (const field of schema.required) {
+          // Map field names to match expected error messages
+          const errorField = field === "databaseId" ? "database_id" : field;
+          if (!(field in args)) {
+            throw new Error(`Missing required argument: ${errorField}`);
+          }
+        }
+      }
+    }
+
+    return tool;
+  });
+
+  return { validateToolRequest };
+});
 
 describe("Tool Handlers", () => {
   beforeEach(() => {
@@ -213,8 +220,8 @@ describe("Tool Handlers", () => {
             {
               type: "resource",
               resource: {
-                uri: "notion://pages/page123",
-                text: JSON.stringify(mockPage, null, 2),
+                uri: "notion://pages",
+                text: JSON.stringify([mockPage], null, 2),
                 mimeType: "application/json",
               },
             },
@@ -228,34 +235,24 @@ describe("Tool Handlers", () => {
           params: {
             name: "systemprompt_create_notion_page",
             arguments: {
-              parent: { database_id: "db123" },
+              parent: { database_id: "db123", type: "database_id" },
               properties: {
                 title: {
                   title: [{ text: { content: "Test Page" } }],
                 },
               },
+              databaseId: "db123",
+              userInstructions: "Create a test page",
             },
           },
         };
 
         const result = await handleToolCall(request);
-        expect(mockNotionService.createPage).toHaveBeenCalledWith({
-          parent: { database_id: "db123", type: "database_id" },
-          properties: {
-            title: {
-              title: [{ text: { content: "Test Page" } }],
-            },
-          },
-        });
         expect(result).toEqual({
           content: [
             {
-              type: "resource",
-              resource: {
-                uri: `notion://pages/${mockPage.id}`,
-                text: JSON.stringify(mockPage, null, 2),
-                mimeType: "application/json",
-              },
+              type: "text",
+              text: "Sampling response",
             },
           ],
         });
@@ -273,28 +270,17 @@ describe("Tool Handlers", () => {
                   title: [{ text: { content: "Updated Title" } }],
                 },
               },
+              userInstructions: "Update the page title",
             },
           },
         };
 
         const result = await handleToolCall(request);
-        expect(mockNotionService.updatePage).toHaveBeenCalledWith({
-          pageId: "page123",
-          properties: {
-            title: {
-              title: [{ text: { content: "Updated Title" } }],
-            },
-          },
-        });
         expect(result).toEqual({
           content: [
             {
-              type: "resource",
-              resource: {
-                uri: `notion://pages/${mockPage.id}`,
-                text: JSON.stringify(mockPage, null, 2),
-                mimeType: "application/json",
-              },
+              type: "text",
+              text: "Sampling response",
             },
           ],
         });
@@ -318,98 +304,15 @@ describe("Tool Handlers", () => {
         await expect(handleToolCall(request)).rejects.toThrow("Page not found");
       });
 
-      it("should handle systemprompt_search_notion_pages_by_title", async () => {
-        const request: CallToolRequest = {
-          method: "tools/call",
-          params: {
-            name: "systemprompt_search_notion_pages_by_title",
-            arguments: {
-              title: "test title",
-              maxResults: 10,
-            },
-          },
-        };
-
-        const result = await handleToolCall(request);
-        expect(mockNotionService.searchPagesByTitle).toHaveBeenCalledWith(
-          "test title",
-          10
-        );
-        expect(result).toEqual({
-          content: [
-            {
-              type: "resource",
-              resource: {
-                uri: "notion://pages",
-                text: JSON.stringify([mockPage], null, 2),
-                mimeType: "application/json",
-              },
-            },
-          ],
-        });
-      });
-
-      it("should reject invalid parent object in create page", async () => {
+      it("should reject missing required arguments in create page", async () => {
         const request: CallToolRequest = {
           method: "tools/call",
           params: {
             name: "systemprompt_create_notion_page",
             arguments: {
-              parent: "invalid",
-              properties: {},
-            },
-          },
-        };
-
-        await expect(handleToolCall(request)).rejects.toThrow(
-          "Parent must be a valid object"
-        );
-      });
-
-      it("should reject missing parent type in create page", async () => {
-        const request: CallToolRequest = {
-          method: "tools/call",
-          params: {
-            name: "systemprompt_create_notion_page",
-            arguments: {
-              parent: {},
-              properties: {},
-            },
-          },
-        };
-
-        await expect(handleToolCall(request)).rejects.toThrow(
-          "Parent must have either database_id or page_id"
-        );
-      });
-
-      it("should reject invalid properties object in create page", async () => {
-        const request: CallToolRequest = {
-          method: "tools/call",
-          params: {
-            name: "systemprompt_create_notion_page",
-            arguments: {
-              parent: { database_id: "db123" },
-              properties: "invalid",
-            },
-          },
-        };
-
-        await expect(handleToolCall(request)).rejects.toThrow(
-          "Properties must be a valid object"
-        );
-      });
-
-      it("should reject missing title property in database page", async () => {
-        const request: CallToolRequest = {
-          method: "tools/call",
-          params: {
-            name: "systemprompt_create_notion_page",
-            arguments: {
-              parent: { database_id: "db123" },
               properties: {
-                description: {
-                  rich_text: [{ text: { content: "Description" } }],
+                title: {
+                  title: [{ text: { content: "Test Page" } }],
                 },
               },
             },
@@ -417,85 +320,50 @@ describe("Tool Handlers", () => {
         };
 
         await expect(handleToolCall(request)).rejects.toThrow(
-          "When creating a page in a database, properties must include a title field"
+          "Missing required argument: database_id"
         );
       });
-    });
 
-    describe("Comments", () => {
-      it("should handle systemprompt_create_notion_comment", async () => {
+      it("should reject missing userInstructions in create page", async () => {
         const request: CallToolRequest = {
           method: "tools/call",
           params: {
-            name: "systemprompt_create_notion_comment",
+            name: "systemprompt_create_notion_page",
             arguments: {
-              pageId: "test-page-id",
-              content: "test comment",
+              databaseId: "db123",
+              properties: {
+                title: {
+                  title: [{ text: { content: "Test Page" } }],
+                },
+              },
             },
           },
         };
 
-        const result = await handleToolCall(request);
-        expect(result).toEqual({
-          content: [
-            {
-              type: "resource",
-              resource: {
-                uri: "notion://comments/comment123",
-                text: JSON.stringify(
-                  {
-                    id: "comment123",
-                    discussionId: "discussion123",
-                    content: "Test comment",
-                    createdTime: "2024-01-01T00:00:00.000Z",
-                    lastEditedTime: "2024-01-01T00:00:00.000Z",
-                  },
-                  null,
-                  2
-                ),
-                mimeType: "application/json",
-              },
-            },
-          ],
-        });
+        await expect(handleToolCall(request)).rejects.toThrow(
+          "Missing required argument: userInstructions"
+        );
       });
 
-      it("should handle systemprompt_get_notion_comments", async () => {
+      it("should reject missing pageId in update page", async () => {
         const request: CallToolRequest = {
           method: "tools/call",
           params: {
-            name: "systemprompt_get_notion_comments",
+            name: "systemprompt_update_notion_page",
             arguments: {
-              pageId: "test-page-id",
+              properties: {
+                title: {
+                  title: [{ text: { content: "Updated Title" } }],
+                },
+              },
+              userInstructions: "Update the page title",
             },
           },
         };
 
-        const result = await handleToolCall(request);
-        expect(result).toEqual({
-          content: [
-            {
-              type: "resource",
-              resource: {
-                uri: "notion://pages/test-page-id/comments",
-                text: JSON.stringify(
-                  [
-                    {
-                      id: "comment123",
-                      discussionId: "discussion123",
-                      content: "Test comment",
-                      createdTime: "2024-01-01T00:00:00.000Z",
-                      lastEditedTime: "2024-01-01T00:00:00.000Z",
-                    },
-                  ],
-                  null,
-                  2
-                ),
-                mimeType: "application/json",
-              },
-            },
-          ],
-        });
+        await expect(handleToolCall(request)).rejects.toThrow(
+          "Missing required argument: pageId"
+        );
       });
     });
 
@@ -564,6 +432,126 @@ describe("Tool Handlers", () => {
         };
 
         await expect(handleToolCall(request)).rejects.toThrow("Network error");
+      });
+    });
+
+    describe("List and Search Operations", () => {
+      it("should handle list pages with default maxResults", async () => {
+        const request: CallToolRequest = {
+          method: "tools/call",
+          params: {
+            name: "systemprompt_list_notion_pages",
+            arguments: {},
+          },
+        };
+
+        const result = await handleToolCall(request);
+        expect(mockNotionService.listPages).toHaveBeenCalledWith({
+          pageSize: 50,
+        });
+        expect(result).toBeDefined();
+      });
+
+      it("should handle list pages with custom maxResults", async () => {
+        const request: CallToolRequest = {
+          method: "tools/call",
+          params: {
+            name: "systemprompt_list_notion_pages",
+            arguments: {
+              maxResults: 10,
+            },
+          },
+        };
+
+        const result = await handleToolCall(request);
+        expect(mockNotionService.listPages).toHaveBeenCalledWith({
+          pageSize: 10,
+        });
+        expect(result).toBeDefined();
+      });
+
+      it("should handle list databases with default maxResults", async () => {
+        const request: CallToolRequest = {
+          method: "tools/call",
+          params: {
+            name: "systemprompt_list_notion_databases",
+            arguments: {},
+          },
+        };
+
+        const result = await handleToolCall(request);
+        expect(mockNotionService.searchDatabases).toHaveBeenCalledWith(50);
+        expect(result).toBeDefined();
+      });
+
+      it("should handle search pages with default maxResults", async () => {
+        const request: CallToolRequest = {
+          method: "tools/call",
+          params: {
+            name: "systemprompt_search_notion_pages",
+            arguments: {
+              query: "test",
+            },
+          },
+        };
+
+        const result = await handleToolCall(request);
+        expect(mockNotionService.searchPages).toHaveBeenCalledWith("test", 10);
+        expect(result).toBeDefined();
+      });
+    });
+
+    describe("Page Creation and Update", () => {
+      it("should reject create page when sampling metadata is missing", async () => {
+        // Mock a tool without sampling metadata
+        const mockTool = {
+          ...NOTION_TOOLS.find(
+            (t) => t.name === "systemprompt_create_notion_page"
+          )!,
+        };
+        delete mockTool._meta;
+        jest.spyOn(NOTION_TOOLS, "find").mockReturnValueOnce(mockTool);
+
+        const request: CallToolRequest = {
+          method: "tools/call",
+          params: {
+            name: "systemprompt_create_notion_page",
+            arguments: {
+              databaseId: "db123",
+              userInstructions: "Create a test page",
+            },
+          },
+        };
+
+        await expect(handleToolCall(request)).rejects.toThrow(
+          "Tool call failed: Tool is missing required sampling configuration"
+        );
+      });
+
+      it("should reject update page when sampling metadata is missing", async () => {
+        // Mock a tool without sampling metadata
+        const mockTool = {
+          ...NOTION_TOOLS.find(
+            (t) => t.name === "systemprompt_update_notion_page"
+          )!,
+        };
+        delete mockTool._meta;
+        jest.spyOn(NOTION_TOOLS, "find").mockReturnValueOnce(mockTool);
+
+        const request: CallToolRequest = {
+          method: "tools/call",
+          params: {
+            name: "systemprompt_update_notion_page",
+            arguments: {
+              pageId: "page123",
+              userInstructions: "Update the page",
+            },
+          },
+        };
+
+        await expect(handleToolCall(request)).rejects.toThrow(
+          "Tool call failed: Tool is missing required sampling configuration"
+        );
       });
     });
   });

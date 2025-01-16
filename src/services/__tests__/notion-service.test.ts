@@ -11,12 +11,13 @@ import { Client } from "@notionhq/client";
 import type {
   PageObjectResponse,
   DatabaseObjectResponse,
-  CommentObjectResponse,
   UserObjectResponse,
-  CreateDatabaseParameters,
+  BlockObjectRequest,
+  BlockObjectResponse,
   GetPagePropertyResponse,
-  TitlePropertyItemObjectResponse,
-  RichTextItemResponse,
+  ParagraphBlockObjectResponse,
+  ListBlockChildrenResponse,
+  AppendBlockChildrenResponse,
 } from "@notionhq/client/build/src/api-endpoints.js";
 
 const TEST_TOKEN = "test-token";
@@ -120,32 +121,6 @@ const mockDatabase: DatabaseObjectResponse = {
   in_trash: false,
 };
 
-const mockComment: CommentObjectResponse = {
-  id: "test-comment-id",
-  object: "comment",
-  parent: { type: "page_id", page_id: "test-page-id" },
-  discussion_id: "test-discussion-id",
-  rich_text: [
-    {
-      type: "text",
-      text: { content: "Test comment", link: null },
-      plain_text: "Test comment",
-      annotations: {
-        bold: false,
-        italic: false,
-        strikethrough: false,
-        underline: false,
-        code: false,
-        color: "default",
-      },
-      href: null,
-    },
-  ],
-  created_by: mockUser,
-  created_time: "2024-01-01T00:00:00.000Z",
-  last_edited_time: "2024-01-01T00:00:00.000Z",
-};
-
 // Mock Notion Client
 jest.mock("@notionhq/client", () => ({
   Client: jest.fn().mockImplementation(() => ({
@@ -178,16 +153,6 @@ jest.mock("@notionhq/client", () => ({
         next_cursor: null,
       })
     ),
-    comments: {
-      create: jest.fn().mockImplementation(() => Promise.resolve(mockComment)),
-      list: jest.fn().mockImplementation(() =>
-        Promise.resolve({
-          results: [mockComment],
-          has_more: false,
-          next_cursor: null,
-        })
-      ),
-    },
   })),
 }));
 
@@ -207,10 +172,6 @@ describe("NotionService", () => {
         properties: {
           retrieve: jest.fn(),
         },
-      },
-      comments: {
-        create: jest.fn(),
-        list: jest.fn(),
       },
     };
   });
@@ -429,100 +390,127 @@ describe("NotionService", () => {
       });
       expect(result).toBe(mockProperty);
     });
-  });
 
-  describe("comment operations", () => {
-    it("should create comment", async () => {
+    it("should throw error when update response is not a full page", async () => {
       const client = (service as any).client;
-      const mockComment: CommentObjectResponse = {
-        id: "comment123",
-        parent: { type: "page_id", page_id: "page123" },
-        discussion_id: "discussion123",
-        rich_text: [
-          {
-            type: "text",
-            text: { content: "Test comment", link: null },
-            plain_text: "Test comment",
-            annotations: {
-              bold: false,
-              italic: false,
-              strikethrough: false,
-              underline: false,
-              code: false,
-              color: "default",
+      const invalidResponse = { ...mockPage, object: "not_a_page" };
+      client.pages.update.mockResolvedValueOnce(invalidResponse);
+
+      await expect(
+        service.updatePage({
+          pageId: "test-page-id",
+          properties: {
+            title: {
+              title: [{ text: { content: "Updated Page" } }],
             },
-            href: null,
           },
-        ],
-        created_time: "2024-01-01T00:00:00.000Z",
-        last_edited_time: "2024-01-01T00:00:00.000Z",
-        created_by: mockUser,
-        object: "comment",
+        })
+      ).rejects.toThrow("Invalid response from Notion API");
+    });
+
+    it("should update page with children blocks", async () => {
+      const client = (service as any).client;
+      client.pages.update.mockResolvedValueOnce(mockPage);
+
+      client.blocks = {
+        children: {
+          append: jest.fn().mockImplementation(() =>
+            Promise.resolve({
+              object: "list",
+              results: [],
+              type: "block",
+              block: {},
+              next_cursor: null,
+              has_more: false,
+            })
+          ),
+        },
       };
 
-      client.comments.create.mockResolvedValueOnce(mockComment);
-
-      const result = await service.createComment("page123", "Test comment");
-      expect(client.comments.create).toHaveBeenCalledWith({
-        parent: { page_id: "page123" },
-        rich_text: [
-          {
-            type: "text",
-            text: { content: "Test comment" },
+      const children: BlockObjectRequest[] = [
+        {
+          object: "block",
+          type: "paragraph",
+          paragraph: {
+            rich_text: [{ type: "text", text: { content: "Test content" } }],
           },
-        ],
+        },
+      ];
+
+      await service.updatePage({
+        pageId: "test-page-id",
+        properties: {
+          title: {
+            title: [{ text: { content: "Updated Page" } }],
+          },
+        },
+        children,
       });
-      expect(result).toMatchObject({
-        id: "comment123",
-        discussionId: "discussion123",
-        content: "Test comment",
+
+      expect(client.blocks.children.append).toHaveBeenCalledWith({
+        block_id: "test-page-id",
+        children,
       });
     });
 
-    it("should get comments", async () => {
+    it("should get page blocks", async () => {
       const client = (service as any).client;
-      const mockComment: CommentObjectResponse = {
-        id: "comment123",
-        parent: { type: "page_id", page_id: "page123" },
-        discussion_id: "discussion123",
-        rich_text: [
-          {
-            type: "text",
-            text: { content: "Test comment", link: null },
-            plain_text: "Test comment",
-            annotations: {
-              bold: false,
-              italic: false,
-              strikethrough: false,
-              underline: false,
-              code: false,
-              color: "default",
-            },
-            href: null,
+      const mockBlocks: ParagraphBlockObjectResponse[] = [
+        {
+          id: "block-id",
+          parent: { type: "page_id", page_id: "test-page-id" },
+          created_time: "2024-01-01T00:00:00.000Z",
+          last_edited_time: "2024-01-01T00:00:00.000Z",
+          created_by: mockUser,
+          last_edited_by: mockUser,
+          has_children: false,
+          archived: false,
+          object: "block",
+          type: "paragraph",
+          paragraph: {
+            rich_text: [
+              {
+                type: "text",
+                text: { content: "Test content", link: null },
+                annotations: {
+                  bold: false,
+                  italic: false,
+                  strikethrough: false,
+                  underline: false,
+                  code: false,
+                  color: "default",
+                },
+                plain_text: "Test content",
+                href: null,
+              },
+            ],
+            color: "default",
           },
-        ],
-        created_time: "2024-01-01T00:00:00.000Z",
-        last_edited_time: "2024-01-01T00:00:00.000Z",
-        created_by: mockUser,
-        object: "comment",
+          in_trash: false,
+        },
+      ];
+
+      client.blocks = {
+        children: {
+          list: jest.fn().mockImplementation(() =>
+            Promise.resolve({
+              type: "block",
+              block: {},
+              object: "list",
+              next_cursor: null,
+              has_more: false,
+              results: mockBlocks,
+            })
+          ),
+        },
       };
 
-      client.comments.list.mockResolvedValueOnce({
-        results: [mockComment],
-        has_more: false,
-        next_cursor: null,
-      });
+      const result = await service.getPageBlocks("test-page-id");
 
-      const result = await service.getComments("page123");
-      expect(client.comments.list).toHaveBeenCalledWith({
-        block_id: "page123",
+      expect(client.blocks.children.list).toHaveBeenCalledWith({
+        block_id: "test-page-id",
       });
-      expect(result).toHaveLength(1);
-      expect(result[0]).toMatchObject({
-        id: "comment123",
-        discussionId: "discussion123",
-        content: "Test comment",
-      });
+      expect(result).toEqual(mockBlocks);
     });
   });
 
@@ -550,6 +538,61 @@ describe("NotionService", () => {
         id: "test-page-id",
       });
       await expect(service.getPage("test-page-id")).rejects.toThrow();
+    });
+  });
+
+  describe("database operations", () => {
+    it("should search databases", async () => {
+      const client = (service as any).client;
+      const mockResponse = {
+        object: "list",
+        results: [mockDatabase],
+        has_more: false,
+        next_cursor: null,
+        type: "database",
+      };
+      client.search.mockResolvedValueOnce(mockResponse);
+
+      const result = await service.searchDatabases(10);
+
+      expect(client.search).toHaveBeenCalledWith({
+        filter: {
+          property: "object",
+          value: "database",
+        },
+        page_size: 10,
+        sort: {
+          direction: "descending",
+          timestamp: "last_edited_time",
+        },
+      });
+      expect(result).toEqual(mockResponse);
+    });
+
+    it("should search databases with default max results", async () => {
+      const client = (service as any).client;
+      const mockResponse = {
+        object: "list",
+        results: [mockDatabase],
+        has_more: false,
+        next_cursor: null,
+        type: "database",
+      };
+      client.search.mockResolvedValueOnce(mockResponse);
+
+      await service.searchDatabases();
+
+      expect(client.search).toHaveBeenCalledWith({
+        filter: {
+          property: "object",
+          value: "database",
+        },
+        page_size: 50, // Default value
+        sort: {
+          direction: "descending",
+          timestamp: "last_edited_time",
+        },
+      });
     });
   });
 });

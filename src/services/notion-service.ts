@@ -1,19 +1,17 @@
 import { Client } from "@notionhq/client";
 import type {
   PageObjectResponse,
-  CommentObjectResponse,
   CreatePageParameters,
   GetPagePropertyResponse,
 } from "@notionhq/client/build/src/api-endpoints.d.ts";
+import { isFullPage, mapPageToNotionPage } from "../utils/notion-utils.js";
 import {
-  NotionPage,
   ListPagesOptions,
   ListPagesResult,
+  NotionPage,
   CreatePageOptions,
   UpdatePageOptions,
-  NotionComment,
 } from "../types/notion.js";
-import { isFullPage, mapPageToNotionPage } from "../utils/notion-utils.js";
 
 export class NotionService {
   private static instance: NotionService;
@@ -111,11 +109,26 @@ export class NotionService {
     return mapPageToNotionPage(page);
   }
 
+  /**
+   * Updates an existing page in Notion
+   */
   async updatePage(options: UpdatePageOptions): Promise<NotionPage> {
-    const response = (await this.client.pages.update({
+    const response = await this.client.pages.update({
       page_id: options.pageId,
       properties: options.properties,
-    })) as PageObjectResponse;
+    });
+
+    if (!isFullPage(response)) {
+      throw new Error("Invalid response from Notion API");
+    }
+
+    // After updating the page properties, update the content if provided
+    if (options.children) {
+      await this.client.blocks.children.append({
+        block_id: options.pageId,
+        children: options.children,
+      });
+    }
 
     return mapPageToNotionPage(response);
   }
@@ -165,61 +178,11 @@ export class NotionService {
     return response;
   }
 
-  async createComment(
-    pageId: string,
-    content: string,
-    discussionId?: string
-  ): Promise<NotionComment> {
-    const response = (await this.client.comments.create({
-      parent: {
-        page_id: pageId,
-      },
-      discussion_id: discussionId,
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content,
-          },
-        },
-      ],
-    })) as CommentObjectResponse;
-
-    return {
-      id: response.id,
-      discussionId: response.discussion_id,
-      content: response.rich_text[0]?.plain_text || "",
-      createdTime: response.created_time,
-      lastEditedTime: response.last_edited_time,
-      parentId: discussionId,
-    };
-  }
-
-  async getComments(pageId: string): Promise<NotionComment[]> {
-    const response = await this.client.comments.list({
-      block_id: pageId,
+  async deletePage(pageId: string): Promise<void> {
+    await this.client.pages.update({
+      page_id: pageId,
+      archived: true,
     });
-
-    return response.results
-      .filter(
-        (comment): comment is CommentObjectResponse =>
-          "discussion_id" in comment
-      )
-      .map((comment) => {
-        const parentId =
-          "comment_id" in comment.parent
-            ? (comment.parent as { comment_id: string }).comment_id
-            : undefined;
-
-        return {
-          id: comment.id,
-          discussionId: comment.discussion_id,
-          content: comment.rich_text[0]?.plain_text || "",
-          createdTime: comment.created_time,
-          lastEditedTime: comment.last_edited_time,
-          parentId,
-        };
-      });
   }
 
   async getPageProperty(
@@ -230,5 +193,13 @@ export class NotionService {
       page_id: pageId,
       property_id: propertyId,
     });
+  }
+
+  async getPageBlocks(pageId: string) {
+    const response = await this.client.blocks.children.list({
+      block_id: pageId,
+    });
+
+    return response.results;
   }
 }

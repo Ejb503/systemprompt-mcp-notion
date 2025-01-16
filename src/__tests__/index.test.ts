@@ -1,4 +1,11 @@
-import { jest } from "@jest/globals";
+import {
+  jest,
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+} from "@jest/globals";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { MockServer } from "../__mocks__/@modelcontextprotocol/sdk";
@@ -24,7 +31,18 @@ jest.mock("../services/systemprompt-service.js", () => ({
     cleanup: jest.fn(),
   },
 }));
-jest.mock("../services/notion-service.js");
+jest.mock("../services/notion-service.js", () => ({
+  NotionService: {
+    initialize: jest.fn(),
+    getInstance: jest.fn().mockReturnValue({
+      searchPages: jest.fn(),
+      getPage: jest.fn(),
+      createPage: jest.fn(),
+      updatePage: jest.fn(),
+      deletePage: jest.fn(),
+    }),
+  },
+}));
 jest.mock("dotenv", () => ({
   config: jest.fn(),
 }));

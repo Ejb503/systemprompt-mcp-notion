@@ -1,7 +1,7 @@
 import type {
   SystempromptBlockResponse,
   SystempromptPromptResponse,
-} from "../types/index.js";
+} from "../types/systemprompt.js";
 
 export class SystemPromptService {
   private static instance: SystemPromptService | null = null;

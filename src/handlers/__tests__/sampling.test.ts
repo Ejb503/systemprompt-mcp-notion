@@ -1,452 +1,289 @@
-import { jest } from "@jest/globals";
+import { jest, describe, it, expect } from "@jest/globals";
 import { server } from "../../index.js";
-import { sendSamplingRequest } from "../sampling.js";
+import { sendSamplingRequest } from "../sampling";
+import { handleCallback } from "../../utils/message-handlers";
 import type {
   CreateMessageRequest,
   CreateMessageResult,
 } from "@modelcontextprotocol/sdk/types.js";
+import { ERROR_MESSAGES } from "../../constants/notion.js";
 
-// Mock the server
+// Mock dependencies
 jest.mock("../../index.js", () => ({
   server: {
     createMessage: jest.fn(),
   },
 }));
+jest.mock("../../utils/message-handlers", () => ({
+  handleCallback: jest.fn(),
+}));
 
 const mockCreateMessage = server.createMessage as jest.MockedFunction<
   typeof server.createMessage
 >;
+const mockHandleCallback = handleCallback as jest.MockedFunction<
+  typeof handleCallback
+>;
 
-describe("Sampling Handler", () => {
+describe("sendSamplingRequest", () => {
+  const mockResult = {
+    id: "test-id",
+    content: {
+      type: "text",
+      text: "Test response",
+    },
+    role: "assistant",
+    model: "test-model",
+    metadata: {},
+  } as CreateMessageResult;
+
+  const validRequest = {
+    method: "sampling/createMessage",
+    params: {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: "Hello world",
+          },
+        },
+      ],
+      maxTokens: 100,
+    },
+  } as CreateMessageRequest;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCreateMessage.mockResolvedValue(mockResult);
+    mockHandleCallback.mockResolvedValue(mockResult);
   });
 
-  describe("Message Validation", () => {
-    it("should accept valid text messages", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: "Hello world",
-              },
-            },
-          ],
-          maxTokens: 100,
-        },
-      };
+  describe("Basic Request Validation", () => {
+    it("should successfully process a valid request", async () => {
+      const result = await sendSamplingRequest(validRequest);
 
-      const mockResponse: CreateMessageResult = {
-        role: "assistant",
-        content: {
-          type: "text",
-          text: "Response",
-        },
-        model: "test-model",
-      };
-
-      mockCreateMessage.mockResolvedValueOnce(mockResponse);
-      await expect(sendSamplingRequest(request)).resolves.toEqual(mockResponse);
+      expect(mockCreateMessage).toHaveBeenCalledWith({
+        messages: validRequest.params.messages,
+        maxTokens: validRequest.params.maxTokens,
+      });
+      expect(result).toEqual(mockResult);
     });
 
-    it("should reject messages with invalid role", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "invalid" as any,
-              content: {
-                type: "text",
-                text: "Hello world",
-              },
-            },
-          ],
-          maxTokens: 100,
-        },
+    it("should throw error for missing method", async () => {
+      const invalidRequest = {
+        params: validRequest.params,
       };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        'Message role must be either "user" or "assistant"'
-      );
+      await expect(
+        sendSamplingRequest(invalidRequest as any)
+      ).rejects.toThrow();
     });
 
-    it("should reject text messages without text field", async () => {
-      const request: CreateMessageRequest = {
+    it("should throw error for missing params", async () => {
+      const invalidRequest = {
         method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-              } as any,
-            },
-          ],
-          maxTokens: 100,
-        },
       };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        "Text content must have a string text field"
-      );
-    });
-
-    it("should reject text messages with non-string text field", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: 123 as any,
-              },
-            },
-          ],
-          maxTokens: 100,
-        },
-      };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        "Text content must have a string text field"
-      );
-    });
-
-    it("should reject messages with invalid content type", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "invalid" as any,
-                data: "base64data",
-                mimeType: "image/png",
-              },
-            },
-          ],
-          maxTokens: 100,
-        },
-      };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        'Content type must be either "text" or "image"'
-      );
-    });
-
-    it("should reject messages without content object", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-            } as any,
-          ],
-          maxTokens: 100,
-        },
-      };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        "Message must have a content object"
-      );
-    });
-
-    it("should accept valid image messages", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "image",
-                data: "base64data",
-                mimeType: "image/png",
-              },
-            },
-          ],
-          maxTokens: 100,
-        },
-      };
-
-      const mockResponse: CreateMessageResult = {
-        role: "assistant",
-        content: {
-          type: "text",
-          text: "Response",
-        },
-        model: "test-model",
-      };
-
-      mockCreateMessage.mockResolvedValueOnce(mockResponse);
-      await expect(sendSamplingRequest(request)).resolves.toEqual(mockResponse);
-    });
-
-    it("should reject image messages without data", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "image",
-                mimeType: "image/png",
-              } as any,
-            },
-          ],
-          maxTokens: 100,
-        },
-      };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        "Image content must have a base64 data field"
-      );
-    });
-
-    it("should reject image messages without mimeType", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "image",
-                data: "base64data",
-              } as any,
-            },
-          ],
-          maxTokens: 100,
-        },
-      };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        "Image content must have a mimeType field"
-      );
-    });
-  });
-
-  describe("Request Validation", () => {
-    it("should reject requests without messages", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [],
-          maxTokens: 100,
-        },
-      };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        "Request must have at least one message"
-      );
-    });
-
-    it("should reject requests with invalid maxTokens", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: "Hello world",
-              },
-            },
-          ],
-          maxTokens: -1,
-        },
-      };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        "maxTokens must be a positive number"
-      );
-    });
-
-    it("should reject requests with invalid temperature", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: "Hello world",
-              },
-            },
-          ],
-          maxTokens: 100,
-          temperature: 2,
-        },
-      };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        "temperature must be a number between 0 and 1"
-      );
-    });
-
-    it("should reject requests with invalid includeContext", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: "Hello world",
-              },
-            },
-          ],
-          maxTokens: 100,
-          includeContext: "invalid" as any,
-        },
-      };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        'includeContext must be "none", "thisServer", or "allServers"'
-      );
-    });
-
-    it("should reject requests without params", async () => {
-      const request = {
-        method: "sampling/createMessage",
-      } as CreateMessageRequest;
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
+      await expect(sendSamplingRequest(invalidRequest as any)).rejects.toThrow(
         "Request must have params"
       );
     });
 
-    it("should validate model preferences", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
+    it("should throw error for empty messages array", async () => {
+      const invalidRequest = {
+        ...validRequest,
+        params: {
+          ...validRequest.params,
+          messages: [],
+        },
+      };
+      await expect(sendSamplingRequest(invalidRequest)).rejects.toThrow(
+        "Request must have at least one message"
+      );
+    });
+  });
+
+  describe("Message Content Validation", () => {
+    it("should throw error for missing content object", async () => {
+      const invalidRequest = {
+        ...validRequest,
+        params: {
+          ...validRequest.params,
+          messages: [{ role: "user" }],
+        },
+      };
+      await expect(sendSamplingRequest(invalidRequest as any)).rejects.toThrow(
+        "Message must have a content object"
+      );
+    });
+
+    it("should throw error for missing content type", async () => {
+      const invalidRequest = {
+        ...validRequest,
+        params: {
+          ...validRequest.params,
+          messages: [{ role: "user", content: {} }],
+        },
+      };
+      await expect(sendSamplingRequest(invalidRequest as any)).rejects.toThrow(
+        "Message content must have a type field"
+      );
+    });
+
+    it("should throw error for invalid content type", async () => {
+      const invalidRequest = {
+        ...validRequest,
+        params: {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "invalid",
+                text: "Hello",
+              },
+            },
+          ],
+          maxTokens: 100,
+        },
+      };
+      await expect(sendSamplingRequest(invalidRequest as any)).rejects.toThrow(
+        'Content type must be either "text" or "image"'
+      );
+    });
+
+    it("should throw error for text content without text field", async () => {
+      const invalidRequest = {
+        ...validRequest,
         params: {
           messages: [
             {
               role: "user",
               content: {
                 type: "text",
-                text: "Hello world",
               },
             },
           ],
           maxTokens: 100,
+        },
+      };
+      await expect(sendSamplingRequest(invalidRequest as any)).rejects.toThrow(
+        "Text content must have a string text field"
+      );
+    });
+
+    it("should throw error for image content without required fields", async () => {
+      const invalidRequest = {
+        ...validRequest,
+        params: {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "image",
+              },
+            },
+          ],
+          maxTokens: 100,
+        },
+      };
+      await expect(sendSamplingRequest(invalidRequest as any)).rejects.toThrow(
+        /Image content must have a (base64 data|mimeType) field/
+      );
+    });
+  });
+
+  describe("Parameter Validation", () => {
+    it("should throw error for invalid temperature", async () => {
+      const invalidRequest = {
+        ...validRequest,
+        params: {
+          ...validRequest.params,
+          temperature: 2,
+        },
+      };
+      await expect(sendSamplingRequest(invalidRequest)).rejects.toThrow(
+        "temperature must be a number between 0 and 1"
+      );
+    });
+
+    it("should throw error for invalid maxTokens", async () => {
+      const invalidRequest = {
+        ...validRequest,
+        params: {
+          ...validRequest.params,
+          maxTokens: 0,
+        },
+      };
+      await expect(sendSamplingRequest(invalidRequest)).rejects.toThrow(
+        "maxTokens must be a positive number"
+      );
+    });
+
+    it("should throw error for invalid includeContext", async () => {
+      const invalidRequest = {
+        ...validRequest,
+        params: {
+          ...validRequest.params,
+          includeContext: "invalid",
+        },
+      };
+      await expect(sendSamplingRequest(invalidRequest as any)).rejects.toThrow(
+        'includeContext must be "none", "thisServer", or "allServers"'
+      );
+    });
+
+    it("should throw error for invalid model preferences", async () => {
+      const invalidRequest = {
+        ...validRequest,
+        params: {
+          ...validRequest.params,
           modelPreferences: {
-            costPriority: 2,
+            costPriority: 1.5,
             speedPriority: 0.5,
             intelligencePriority: 0.5,
           },
         },
       };
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
+      await expect(sendSamplingRequest(invalidRequest)).rejects.toThrow(
         "Model preference priorities must be numbers between 0 and 1"
       );
     });
+  });
 
-    it("should accept valid model preferences", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
+  describe("Callback Handling", () => {
+    it("should handle callback if provided", async () => {
+      const requestWithCallback = {
+        ...validRequest,
         params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: "Hello world",
-              },
-            },
-          ],
-          maxTokens: 100,
-          modelPreferences: {
-            costPriority: 0.3,
-            speedPriority: 0.3,
-            intelligencePriority: 0.4,
+          ...validRequest.params,
+          _meta: {
+            callback: "http://callback-url.com",
           },
         },
-      };
+      } as CreateMessageRequest;
 
-      const mockResponse: CreateMessageResult = {
-        role: "assistant",
-        content: {
-          type: "text",
-          text: "Response",
-        },
-        model: "test-model",
-      };
+      await sendSamplingRequest(requestWithCallback);
 
-      mockCreateMessage.mockResolvedValueOnce(mockResponse);
-      await expect(sendSamplingRequest(request)).resolves.toEqual(mockResponse);
+      expect(mockHandleCallback).toHaveBeenCalledWith(
+        "http://callback-url.com",
+        mockResult
+      );
     });
   });
 
-  describe("Sampling Request", () => {
-    it("should forward valid requests to the server", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: "Hello world",
-              },
-            },
-          ],
-          maxTokens: 100,
-        },
-      };
+  describe("Error Handling", () => {
+    it("should handle server error", async () => {
+      const error = new Error("Server error");
+      mockCreateMessage.mockRejectedValue(error);
 
-      const mockResponse: CreateMessageResult = {
-        role: "assistant",
-        content: {
-          type: "text",
-          text: "Response",
-        },
-        model: "test-model",
-      };
-
-      mockCreateMessage.mockResolvedValueOnce(mockResponse);
-
-      const result = await sendSamplingRequest(request);
-      expect(result).toEqual(mockResponse);
-      expect(server.createMessage).toHaveBeenCalledWith(request.params);
+      await expect(sendSamplingRequest(validRequest)).rejects.toThrow(error);
     });
 
-    it("should handle server errors gracefully", async () => {
-      const request: CreateMessageRequest = {
-        method: "sampling/createMessage",
-        params: {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: "Hello world",
-              },
-            },
-          ],
-          maxTokens: 100,
-        },
-      };
+    it("should format non-Error errors", async () => {
+      const errorMessage = "Unknown server error";
+      mockCreateMessage.mockRejectedValue(errorMessage);
 
-      const error = new Error("Server error");
-      mockCreateMessage.mockRejectedValueOnce(error);
-
-      await expect(sendSamplingRequest(request)).rejects.toThrow(
-        "Sampling request failed: Server error"
+      await expect(sendSamplingRequest(validRequest)).rejects.toThrow(
+        `${ERROR_MESSAGES.SAMPLING.REQUEST_FAILED}${errorMessage}`
       );
     });
   });

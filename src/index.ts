@@ -25,27 +25,23 @@ import { SystemPromptService } from "./services/systemprompt-service.js";
 import { NotionService } from "./services/notion-service.js";
 import { sendSamplingRequest } from "./handlers/sampling.js";
 
-// Create server instance
 export let server: Server;
 
 export async function main() {
   config();
 
-  // Initialize SystemPrompt service
   const apiKey = process.env.SYSTEMPROMPT_API_KEY;
   if (!apiKey) {
     throw new Error("SYSTEMPROMPT_API_KEY environment variable is required");
   }
   SystemPromptService.initialize(apiKey);
 
-  // Initialize Notion service
   const notionToken = process.env.NOTION_API_KEY;
   if (!notionToken) {
     throw new Error("NOTION_API_KEY environment variable is required");
   }
   NotionService.initialize(notionToken);
 
-  // Initialize server
   server = new Server(serverConfig, serverCapabilities);
 
   server.setRequestHandler(ListResourcesRequestSchema, handleListResources);

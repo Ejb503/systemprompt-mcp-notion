@@ -1,6 +1,6 @@
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import { SystemPromptService } from "../systemprompt-service.js";
-import type { SystempromptPromptResponse } from "../../types/index.js";
+import type { SystempromptPromptResponse } from "../../types/systemprompt.js";
 
 // Mock fetch
 const mockFetch = jest.fn(() =>
