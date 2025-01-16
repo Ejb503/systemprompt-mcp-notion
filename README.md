@@ -9,7 +9,11 @@
 
 # SystemPrompt MCP Notion Server
 
-A high-performance Model Context Protocol (MCP) server that seamlessly integrates Notion into your AI workflows. This server enables AI agents to interact with Notion pages, databases, and comments through a standardized protocol.
+A high-performance Model Context Protocol (MCP) server that seamlessly integrates Notion into your AI workflows. This server enables AI agents to interact with Notion pages and databases through a standardized protocol. This server supports MCP Sampling, which is required to the MCP to create and update Notion pages.
+
+Complicated AI usage is managed by sampling and LLMs.
+
+A compatible MCP client is available [here](https://github.com/Ejb503/multimodal-mcp-client).
 
 ## Key Features
 
@@ -25,12 +29,6 @@ A high-performance Model Context Protocol (MCP) server that seamlessly integrate
   - Manage databases with complex queries
   - Handle comments and discussions
   - Search across your Notion workspace
-
-- **🔒 Enterprise-Grade Security**
-
-  - Secure API key management
-  - Granular permission controls
-  - Rate limiting and request validation
 
 - **🛠 Developer-Friendly**
   - Extensive test coverage with Jest
