@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.3] - 2024-03-27
+
+### Changed
+
+- Updated system prompt handling and validation
+- Enhanced tool validation and type definitions
+- Improved message handling utilities
+- Refined Notion integration and utilities
+
 ## [1.0.2] - 2025-01-15
 
 ### Changed
