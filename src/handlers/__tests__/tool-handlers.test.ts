@@ -9,10 +9,7 @@ import {
 import { NotionService } from "../../services/notion-service.js";
 import { handleToolCall } from "../tool-handlers.js";
 import type { CallToolRequest } from "@modelcontextprotocol/sdk/types.js";
-import type {
-  RichTextItemResponse,
-  GetPagePropertyResponse,
-} from "@notionhq/client/build/src/api-endpoints.js";
+
 import type { NotionPage } from "../../types/notion.js";
 import { NOTION_TOOLS, TOOL_ERROR_MESSAGES } from "../../constants/tools.js";
 

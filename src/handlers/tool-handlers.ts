@@ -8,11 +8,6 @@ import { NotionService } from "../services/notion-service.js";
 import { NOTION_TOOLS, TOOL_ERROR_MESSAGES } from "../constants/tools.js";
 import { validateToolRequest } from "../utils/tool-validation.js";
 import { ajv, validateWithErrors } from "../utils/validation.js";
-import {
-  createTextResponse,
-  createPagesResponse,
-  createDatabasesResponse,
-} from "../utils/tool-utils.js";
 import { sendSamplingRequest } from "./sampling.js";
 import { handleGetPrompt } from "./prompt-handlers.js";
 
@@ -39,7 +34,15 @@ export async function handleToolCall(
           typeof args.maxResults === "number" ? args.maxResults : 50;
         const notion = NotionService.getInstance();
         const result = await notion.listPages({ pageSize: maxResults });
-        return createPagesResponse(result.pages);
+        return {
+          type: "text",
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result.pages, null, 2),
+            },
+          ],
+        };
       }
 
       case "systemprompt_list_notion_databases": {
@@ -47,7 +50,15 @@ export async function handleToolCall(
           typeof args.maxResults === "number" ? args.maxResults : 50;
         const notion = NotionService.getInstance();
         const response = await notion.searchDatabases(maxResults);
-        return createDatabasesResponse(response.results);
+        return {
+          type: "text",
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(response.results, null, 2),
+            },
+          ],
+        };
       }
 
       case "systemprompt_search_notion_pages": {
@@ -55,19 +66,53 @@ export async function handleToolCall(
           typeof args.maxResults === "number" ? args.maxResults : 10;
         const notion = NotionService.getInstance();
         const result = await notion.searchPages(String(args.query), maxResults);
-        return createPagesResponse(result.pages.slice(0, maxResults));
+        return {
+          content: [
+            {
+              type: "resource",
+              resource: {
+                uri: "notion://pages",
+                text: JSON.stringify(
+                  result.pages.slice(0, maxResults),
+                  null,
+                  2
+                ),
+                mimeType: "application/json",
+              },
+            },
+          ],
+        };
       }
 
       case "systemprompt_get_notion_page": {
         const notion = NotionService.getInstance();
         const page = await notion.getPage(String(args.pageId));
-        return createPagesResponse([page]);
+        return {
+          content: [
+            {
+              type: "resource",
+              resource: {
+                uri: "notion://pages",
+                text: JSON.stringify([page], null, 2),
+                mimeType: "application/json",
+              },
+            },
+          ],
+        };
       }
 
       case "systemprompt_delete_notion_page": {
         const notion = NotionService.getInstance();
         await notion.deletePage(String(args.pageId));
-        return createTextResponse("Page deleted successfully");
+        return {
+          type: "text",
+          content: [
+            {
+              type: "text",
+              text: "Page deleted successfully",
+            },
+          ],
+        };
       }
 
       case "systemprompt_create_notion_page": {
@@ -99,7 +144,14 @@ export async function handleToolCall(
             arguments: args,
           },
         });
-        return createTextResponse(result.content.text as string);
+        return {
+          content: [
+            {
+              type: "text",
+              text: result.content.text as string,
+            },
+          ],
+        };
       }
 
       case "systemprompt_update_notion_page": {
@@ -141,7 +193,14 @@ export async function handleToolCall(
             arguments: args,
           },
         });
-        return createTextResponse(result.content.text as string);
+        return {
+          content: [
+            {
+              type: "text",
+              text: result.content.text as string,
+            },
+          ],
+        };
       }
 
       default:
