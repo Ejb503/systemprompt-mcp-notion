@@ -14,6 +14,8 @@ A high-performance Model Context Protocol (MCP) server that seamlessly integrate
 
 A compatible MCP client is available [here](https://github.com/Ejb503/multimodal-mcp-client). Complicated AI usage is managed by sampling and LLMs.
 
+<a href="https://glama.ai/mcp/servers/xe6grtrr0k"><img width="380" height="200" src="https://glama.ai/mcp/servers/xe6grtrr0k/badge" alt="SystemPrompt Notion Server MCP server" /></a>
+
 ## Server Capabilities
 
 const serverCapabilities: { capabilities: ServerCapabilities } = {
