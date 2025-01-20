@@ -79,7 +79,7 @@ Before using this server, you'll need:
    To install systemprompt-mcp-notion for Claude Desktop automatically via [Smithery](https://smithery.ai/server/systemprompt-mcp-notion):
 
    ```bash
-   npx @smithery/cli install systemprompt-mcp-notion --client claude
+   npx -y @smithery/cli install systemprompt-mcp-notion --client claude
    ```
 
    ```bash
