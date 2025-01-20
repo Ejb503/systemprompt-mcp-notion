@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/Ejb503/systemprompt-mcp-notion/badge.svg?branch=main)](https://coveralls.io/github/Ejb503/systemprompt-mcp-notion?branch=main)
 [![Twitter Follow](https://img.shields.io/twitter/follow/tyingshoelaces_?style=social)](https://twitter.com/tyingshoelaces_)
 [![Discord](https://img.shields.io/discord/1255160891062620252?color=7289da&label=discord)](https://discord.com/invite/wkAbSuPWpr)
-[![smithery badge](https://smithery.ai/badge/systemprompt-mcp-notion)](https://smithery.ai/protocol/systemprompt-mcp-notion)
+[![smithery badge](https://smithery.ai/badge/systemprompt-mcp-notion)](https://smithery.ai/server/systemprompt-mcp-notion)
 
 [Website](https://systemprompt.io) | [Documentation](https://systemprompt.io/documentation) | [Blog](https://tyingshoelaces.com)
 
@@ -76,10 +76,10 @@ Before using this server, you'll need:
 
    ### Installing via Smithery
 
-   To install systemprompt-mcp-notion for Claude Desktop automatically via [Smithery](https://smithery.ai/protocol/systemprompt-mcp-notion):
+   To install systemprompt-mcp-notion for Claude Desktop automatically via [Smithery](https://smithery.ai/server/systemprompt-mcp-notion):
 
    ```bash
-   npx @smithery/cli install 016f8b66-26ca-4c12-b1c5-94f04ee3b17e --client claude
+   npx @smithery/cli install systemprompt-mcp-notion --client claude
    ```
 
    ```bash
