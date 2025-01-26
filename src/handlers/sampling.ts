@@ -1,4 +1,4 @@
-import { server } from "../index.js";
+import { server } from "../server.js";
 import type {
   CreateMessageRequest,
   CreateMessageResult,
@@ -13,7 +13,6 @@ export async function sendSamplingRequest(
   try {
     // Validate the request first
     validateRequest(request);
-
     const result = await server.createMessage({
       ...request.params,
       messages: request.params.messages,

@@ -6,16 +6,17 @@
 [![Discord](https://img.shields.io/discord/1255160891062620252?color=7289da&label=discord)](https://discord.com/invite/wkAbSuPWpr)
 [![smithery badge](https://smithery.ai/badge/systemprompt-mcp-notion)](https://smithery.ai/server/systemprompt-mcp-notion)
 
-[Website](https://systemprompt.io) | [Documentation](https://systemprompt.io/documentation) | [Blog](https://tyingshoelaces.com)
+[Website](https://systemprompt.io) | [Documentation](https://systemprompt.io/documentation)
 
 # SystemPrompt MCP Notion Server
 
-A high-performance Model Context Protocol (MCP) server that seamlessly integrates Notion into your AI workflows. This server enables AI agents to interact with Notion pages and databases through a standardized protocol. This server supports MCP Sampling, which is required to the MCP to create and update Notion pages.
+A high-performance Model Context Protocol (MCP) server that seamlessly integrates Notion into your AI workflows. This server enables AI agents to interact with Notion pages and databases through a standardized protocol. This server supports and requires MCP Sampling, which is required to the MCP to create and update Notion pages.
 
-A compatible MCP client is available [here](https://github.com/Ejb503/multimodal-mcp-client). Complicated AI usage is managed by sampling and LLMs.
+A compatible MCP client is available [here](https://github.com/Ejb503/multimodal-mcp-client).
 
 ## Server Capabilities
 
+```typescript
 const serverCapabilities: { capabilities: ServerCapabilities } = {
   capabilities: {
     resources: {
@@ -28,6 +29,7 @@ const serverCapabilities: { capabilities: ServerCapabilities } = {
     sampling: {},
   },
 };
+```
 
 ## Key Features
 

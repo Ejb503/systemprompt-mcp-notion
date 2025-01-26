@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { serverConfig, serverCapabilities } from "./config/server-config.js";
 import {
   handleListResources,
   handleResourceCall,
@@ -10,7 +9,6 @@ import {
   handleListPrompts,
   handleGetPrompt,
 } from "./handlers/prompt-handlers.js";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
@@ -24,8 +22,7 @@ import { config } from "dotenv";
 import { SystemPromptService } from "./services/systemprompt-service.js";
 import { NotionService } from "./services/notion-service.js";
 import { sendSamplingRequest } from "./handlers/sampling.js";
-
-export let server: Server;
+import { server } from "./server.js";
 
 export async function main() {
   config();
@@ -41,8 +38,6 @@ export async function main() {
     throw new Error("NOTION_API_KEY environment variable is required");
   }
   NotionService.initialize(notionToken);
-
-  server = new Server(serverConfig, serverCapabilities);
 
   server.setRequestHandler(ListResourcesRequestSchema, handleListResources);
   server.setRequestHandler(ReadResourceRequestSchema, handleResourceCall);

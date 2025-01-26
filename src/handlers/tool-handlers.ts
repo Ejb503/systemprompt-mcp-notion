@@ -39,7 +39,12 @@ export async function handleToolCall(
           content: [
             {
               type: "text",
-              text: JSON.stringify(result.pages, null, 2),
+              text:
+                result._message +
+                "\n\nPages:\n" +
+                result.items
+                  .map((page) => `- ${page.content} (ID: ${page.id})`)
+                  .join("\n"),
             },
           ],
         };
@@ -55,7 +60,12 @@ export async function handleToolCall(
           content: [
             {
               type: "text",
-              text: JSON.stringify(response.results, null, 2),
+              text:
+                response._message +
+                "\n\nDatabases:\n" +
+                response.items
+                  .map((db) => `- ${db.content} (ID: ${db.id})`)
+                  .join("\n"),
             },
           ],
         };
@@ -67,18 +77,16 @@ export async function handleToolCall(
         const notion = NotionService.getInstance();
         const result = await notion.searchPages(String(args.query), maxResults);
         return {
+          type: "text",
           content: [
             {
-              type: "resource",
-              resource: {
-                uri: "notion://pages",
-                text: JSON.stringify(
-                  result.pages.slice(0, maxResults),
-                  null,
-                  2
-                ),
-                mimeType: "application/json",
-              },
+              type: "text",
+              text:
+                result._message +
+                "\n\nMatched Pages:\n" +
+                result.items
+                  .map((page) => `- ${page.content} (ID: ${page.id})`)
+                  .join("\n"),
             },
           ],
         };
@@ -87,15 +95,57 @@ export async function handleToolCall(
       case "systemprompt_get_notion_page": {
         const notion = NotionService.getInstance();
         const page = await notion.getPage(String(args.pageId));
+        const blocks = await notion.getPageBlocks(String(args.pageId));
+
+        // Format blocks into readable text
+        const contentText = blocks.items
+          .map((block) => {
+            const type = block.metadata?.type;
+            const content = block.content;
+
+            switch (type) {
+              case "paragraph":
+                return content;
+              case "heading_1":
+                return `# ${content}`;
+              case "heading_2":
+                return `## ${content}`;
+              case "heading_3":
+                return `### ${content}`;
+              case "bulleted_list_item":
+                return `• ${content}`;
+              case "numbered_list_item":
+                return `1. ${content}`;
+              case "to_do":
+                return `☐ ${content}`;
+              case "quote":
+                return `> ${content}`;
+              case "code":
+                return `\`\`\`\n${content}\n\`\`\``;
+              case "divider":
+                return "---";
+              default:
+                return content || "";
+            }
+          })
+          .filter((text) => text) // Remove empty blocks
+          .join("\n\n");
+
         return {
+          type: "text",
           content: [
             {
-              type: "resource",
-              resource: {
-                uri: "notion://pages",
-                text: JSON.stringify([page], null, 2),
-                mimeType: "application/json",
-              },
+              type: "text",
+              text:
+                page._message +
+                "\n\nPage Title: " +
+                page.content +
+                "\nID: " +
+                page.id +
+                "\nLast Edited: " +
+                (page.metadata?.lastEditedTime || "Unknown") +
+                "\n\nContent:\n" +
+                contentText,
             },
           ],
         };
@@ -103,13 +153,13 @@ export async function handleToolCall(
 
       case "systemprompt_delete_notion_page": {
         const notion = NotionService.getInstance();
-        await notion.deletePage(String(args.pageId));
+        const result = await notion.deletePage(String(args.pageId));
         return {
           type: "text",
           content: [
             {
               type: "text",
-              text: "Page deleted successfully",
+              text: result._message,
             },
           ],
         };
@@ -169,7 +219,14 @@ export async function handleToolCall(
         const pageBlocks = await notion.getPageBlocks(String(args.pageId));
         const promptArgs = {
           ...(args as Record<string, string>),
-          currentPage: JSON.stringify(pageBlocks, null, 2),
+          currentPage: `${pageBlocks._message}\n\nBlocks:\n${pageBlocks.items
+            .map(
+              (block) =>
+                `- ${block.content || "[Empty block]"} (Type: ${
+                  block.metadata?.type
+                })`
+            )
+            .join("\n")}`,
         };
 
         const prompt = await handleGetPrompt({

@@ -7,7 +7,7 @@ import {
   mapPromptsToListPromptsResult,
   mapBlocksToListResourcesResult,
 } from "../utils/mcp-mappers.js";
-import { server } from "../index.js";
+import { server } from "../server.js";
 
 export async function sendPromptChangedNotification(): Promise<void> {
   const service = SystemPromptService.getInstance();

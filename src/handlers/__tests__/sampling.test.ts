@@ -1,5 +1,4 @@
 import { jest, describe, it, expect } from "@jest/globals";
-import { server } from "../../index.js";
 import { sendSamplingRequest } from "../sampling";
 import { handleCallback } from "../../utils/message-handlers";
 import type {
@@ -7,6 +6,7 @@ import type {
   CreateMessageResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import { ERROR_MESSAGES } from "../../constants/notion.js";
+import { server } from "../../server.js";
 
 // Mock dependencies
 jest.mock("../../index.js", () => ({
