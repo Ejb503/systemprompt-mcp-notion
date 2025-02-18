@@ -20,7 +20,7 @@ interface ServerMetadata {
 
 export const serverConfig: Implementation & { metadata: ServerMetadata } = {
   name: "systemprompt-mcp-notion",
-  version: "1.0.0",
+  version: "1.0.7",
   metadata: {
     name: "System Prompt Notion Integration Server",
     description:
